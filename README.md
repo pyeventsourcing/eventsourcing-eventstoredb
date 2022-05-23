@@ -1,8 +1,10 @@
-# Event Sourcing with EventStoreDB
+# Event Sourcing in Python with EventStoreDB
 
 This package supports using the Python
 [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
-with [EventStoreDB](https://www.eventstore.com/).
+with [EventStoreDB](https://www.eventstore.com/). It uses
+the [esdbclient](https://github.com/pyeventsourcing/esdbclient)
+package to communicate with EventStoreDB via its gRPC interface.
 
 ## Installation
 
@@ -35,20 +37,20 @@ class TrainingSchool(Application):
         dog.add_trick(trick)
         self.save(dog)
 
-    def get_tricks(self, dog_id):
+    def get_dog(self, dog_id):
         dog = self.repository.get(dog_id)
-        return dog.tricks
+        return {"name": dog.name, "tricks": list(dog.tricks)}
 
 
 class Dog(Aggregate):
     INITIAL_VERSION = 0
 
-    @event('Registered')
+    @event("Registered")
     def __init__(self, name):
         self.name = name
         self.tricks = []
 
-    @event('TrickAdded')
+    @event("TrickAdded")
     def add_trick(self, trick):
         self.tricks.append(trick)
 ```
@@ -75,11 +77,12 @@ The application's methods may be then called, from tests and
 user interfaces.
 
 ```python
-dog_id = school.register('Fido')
-school.add_trick(dog_id, 'roll over')
-school.add_trick(dog_id, 'play dead')
-tricks = school.get_tricks(dog_id)
-assert tricks == ['roll over', 'play dead']
+dog_id = school.register("Fido")
+school.add_trick(dog_id, "roll over")
+school.add_trick(dog_id, "play dead")
+dog_details = school.get_dog(dog_id)
+assert dog_details["name"] == "Fido"
+assert dog_details["tricks"] == ['roll over', 'play dead']
 ```
 
 For more information, please refer to the Python
