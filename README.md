@@ -64,7 +64,7 @@ school = TrainingSchool(env={
 })
 ```
 
-In case you are running against a cluster, or want to use SSL/TLS certificates,
+*NB: SSL/TLS not yet supported:* In case you are running against a cluster, or want to use SSL/TLS certificates,
 you can specify these things in the URI.
 
 ```
