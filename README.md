@@ -73,8 +73,7 @@ you can specify these things in the URI.
     'EVENTSTOREDB_URI': 'esdb://localhost:2111,localhost:2112,localhost:2113?tls&rootCertificate=./certs/ca/ca.crt'
 ```
 
-The application's methods may be then called, from tests and
-user interfaces.
+Call application methods from tests and user interfaces.
 
 ```python
 dog_id = school.register('Fido')
