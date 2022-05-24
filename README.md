@@ -39,18 +39,18 @@ class TrainingSchool(Application):
 
     def get_dog(self, dog_id):
         dog = self.repository.get(dog_id)
-        return {"name": dog.name, "tricks": list(dog.tricks)}
+        return {'name': dog.name, 'tricks': list(dog.tricks)}
 
 
 class Dog(Aggregate):
     INITIAL_VERSION = 0
 
-    @event("Registered")
+    @event('Registered')
     def __init__(self, name):
         self.name = name
         self.tricks = []
 
-    @event("TrickAdded")
+    @event('TrickAdded')
     def add_trick(self, trick):
         self.tricks.append(trick)
 ```
@@ -61,8 +61,8 @@ Configure the application to use EventStoreDB. Set environment variable
 
 ```python
 school = TrainingSchool(env={
-    "PERSISTENCE_MODULE": "eventsourcing_eventstoredb",
-    "EVENTSTOREDB_URI": "localhost:2113",
+    'PERSISTENCE_MODULE': 'eventsourcing_eventstoredb',
+    'EVENTSTOREDB_URI': 'localhost:2113',
 })
 ```
 
@@ -70,19 +70,19 @@ school = TrainingSchool(env={
 you can specify these things in the URI.
 
 ```
-    "EVENTSTOREDB_URI": "esdb://localhost:2111,localhost:2112,localhost:2113?tls&rootCertificate=./certs/ca/ca.crt"
+    'EVENTSTOREDB_URI': 'esdb://localhost:2111,localhost:2112,localhost:2113?tls&rootCertificate=./certs/ca/ca.crt'
 ```
 
 The application's methods may be then called, from tests and
 user interfaces.
 
 ```python
-dog_id = school.register("Fido")
-school.add_trick(dog_id, "roll over")
-school.add_trick(dog_id, "play dead")
+dog_id = school.register('Fido')
+school.add_trick(dog_id, 'roll over')
+school.add_trick(dog_id, 'play dead')
 dog_details = school.get_dog(dog_id)
-assert dog_details["name"] == "Fido"
-assert dog_details["tricks"] == ['roll over', 'play dead']
+assert dog_details['name'] == 'Fido'
+assert dog_details['tricks'] == ['roll over', 'play dead']
 ```
 
 To see the events have been saved, we can reconstruct the application
@@ -90,14 +90,14 @@ and get Fido's details again.
 
 ```python
 school = TrainingSchool(env={
-    "PERSISTENCE_MODULE": "eventsourcing_eventstoredb",
-    "EVENTSTOREDB_URI": "localhost:2113",
+    'PERSISTENCE_MODULE': 'eventsourcing_eventstoredb',
+    'EVENTSTOREDB_URI': 'localhost:2113',
 })
 
 dog_details = school.get_dog(dog_id)
 
-assert dog_details["name"] == "Fido"
-assert dog_details["tricks"] == ['roll over', 'play dead']
+assert dog_details['name'] == 'Fido'
+assert dog_details['tricks'] == ['roll over', 'play dead']
 ```
 
 For more information, please refer to the Python
