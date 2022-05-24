@@ -85,6 +85,21 @@ assert dog_details["name"] == "Fido"
 assert dog_details["tricks"] == ['roll over', 'play dead']
 ```
 
+To see the events have been saved, we can reconstruct the application
+and get Fido's details again.
+
+```python
+school = TrainingSchool(env={
+    "PERSISTENCE_MODULE": "eventsourcing_eventstoredb",
+    "EVENTSTOREDB_URI": "localhost:2113",
+})
+
+dog_details = school.get_dog(dog_id)
+
+assert dog_details["name"] == "Fido"
+assert dog_details["tricks"] == ['roll over', 'play dead']
+```
+
 For more information, please refer to the Python
 [eventsourcing](https://github.com/johnbywater/eventsourcing) library
 and the [EventStoreDB](https://www.eventstore.com/) project.

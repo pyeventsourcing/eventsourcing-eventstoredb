@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from unittest import skip
-
 from esdbclient.client import EsdbClient
 from eventsourcing.persistence import ApplicationRecorder
 from eventsourcing.tests.persistence import NonInterleavingNotificationIDsBaseCase
@@ -10,7 +8,6 @@ from eventsourcing_eventstoredb.recorders import EventStoreDBApplicationRecorder
 from .common import INSECURE_CONNECTION_STRING
 
 
-@skip("This is still a bit flakey - not sure why")
 class TestNonInterleaving(NonInterleavingNotificationIDsBaseCase):
     insert_num = 1000
 
