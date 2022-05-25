@@ -1,9 +1,9 @@
 # Event Sourcing in Python with EventStoreDB
 
-This package supports using the Python
+This is an extension package for the Python
 [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
-with [EventStoreDB](https://www.eventstore.com/). It uses
-the [esdbclient](https://github.com/pyeventsourcing/esdbclient)
+that provides a persistence module for [EventStoreDB](https://www.eventstore.com/).
+It uses the [esdbclient](https://github.com/pyeventsourcing/esdbclient)
 package to communicate with EventStoreDB via its gRPC interface.
 
 ## Installation
