@@ -95,7 +95,7 @@ python-versions = "*"
 
 [[package]]
 name = "esdbclient"
-version = "0.3"
+version = "0.4.7"
 description = "Python gRPC Client for EventStoreDB"
 category = "main"
 optional = false
@@ -104,6 +104,7 @@ python-versions = ">=3.7,<4.0"
 [package.dependencies]
 grpcio = ">=1.44.0,<1.45.0"
 protobuf = ">=3.20.0,<3.21.0"
+typing_extensions = "*"
 
 [[package]]
 name = "eventsourcing"
@@ -609,7 +610,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "ae908513c2f0e87ec2beddcf3cd6a1566e3500500ef4034fae2a3f77c5fcf7e3"
+content-hash = "785baf37c3c01912a8677cc4e919a6ff0e775d1d96fb1a4fc05012cd35e221f8"
 
 [metadata.files]
 atomicwrites = [
@@ -705,8 +706,8 @@ distlib = [
     {file = "distlib-0.3.4.zip", hash = "sha256:e4b58818180336dc9c529bfb9a0b58728ffc09ad92027a3f30b7cd91e3458579"},
 ]
 esdbclient = [
-    {file = "esdbclient-0.3-py3-none-any.whl", hash = "sha256:e8bc3b754b6ddfe56d3d4c092610af0afc1f7c869b5ad84e9c55e922dd37ab3c"},
-    {file = "esdbclient-0.3.tar.gz", hash = "sha256:8faece4e31f14f63727017f7c6efc43cc82d69657ecfe34f61d541249ab19cfc"},
+    {file = "esdbclient-0.4.7-py3-none-any.whl", hash = "sha256:204a8ef5177cc00af1e69be5edf32a5a598d22fe9fb39314afaa002969206c94"},
+    {file = "esdbclient-0.4.7.tar.gz", hash = "sha256:c3124d26b986c7e1316f22d528b87ba7da3ba1cda4e665e939a0ef651b1e5d55"},
 ]
 eventsourcing = [
     {file = "eventsourcing-9.2.14-py3-none-any.whl", hash = "sha256:1ea86e8307b9b6fd3586e0b5dee13c79a84f63a160e37ab8aa5fad43db379646"},

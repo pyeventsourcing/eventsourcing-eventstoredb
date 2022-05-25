@@ -3,14 +3,10 @@ import json
 import re
 import sys
 from typing import Any, List, Optional, Sequence
-from uuid import NAMESPACE_OID, UUID, uuid5
+from uuid import UUID
 
-from esdbclient.client import (
-    EsdbClient,
-    ExpectedPositionError,
-    NewEvent,
-    StreamNotFound,
-)
+from esdbclient import ESDB_EVENTS_REGEX, EsdbClient, NewEvent
+from esdbclient.exceptions import ExpectedPositionError, StreamNotFound
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -23,7 +19,7 @@ from eventsourcing.persistence import (
 
 
 class EventStoreDBAggregateRecorder(AggregateRecorder):
-    SNAPSHOT_STREAM_PREFIX = "snapshot-"
+    SNAPSHOT_STREAM_PREFIX = "snapshot-$"
 
     def __init__(
         self,
@@ -96,7 +92,6 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
         try:
             if self.for_snapshotting:
                 stream_name = self.create_snapshot_stream_name(stream_name)
-                # expected_position = self.client.get_stream_position(stream_name)
                 expected_position = -1  # Disable OCC.
             commit_position = self.client.append_events(
                 stream_name=stream_name,
@@ -110,8 +105,8 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
         return [commit_position] * len(new_events)  # The best we can do?
 
     def create_snapshot_stream_name(self, stream_name: str) -> str:
-        return str(uuid5(NAMESPACE_OID, f"/snapshots/{stream_name}"))
-        # return self.SNAPSHOT_STREAM_PREFIX + stream_name
+        # return str(uuid5(NAMESPACE_OID, f"/snapshots/{stream_name}"))
+        return self.SNAPSHOT_STREAM_PREFIX + stream_name
 
     def select_events(  # noqa: C901
         self,
@@ -223,7 +218,7 @@ class EventStoreDBApplicationRecorder(
 
         recorded_events = self.client.read_all_events(
             position=start_commit_position,
-            filter_exclude=["\\$.*", ".*Snapshot"],
+            filter_exclude=(ESDB_EVENTS_REGEX, ".*Snapshot"),
             filter_include=[re.escape(t) for t in topics] or [],
             limit=limit,
         )
@@ -264,12 +259,6 @@ class EventStoreDBApplicationRecorder(
         return notifications
 
     def max_notification_id(self) -> int:
-        recorded_events = self.client.read_all_events(
-            backwards=True,
-            filter_exclude=("\\$.*", ".*Snapshot"),
-            limit=1,
+        return self.client.get_commit_position(
+            filter_exclude=(ESDB_EVENTS_REGEX, ".*Snapshot"),
         )
-        for ev in recorded_events:
-            return ev.commit_position
-        else:
-            return 0
