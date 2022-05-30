@@ -95,7 +95,7 @@ python-versions = "*"
 
 [[package]]
 name = "esdbclient"
-version = "0.4.14"
+version = "0.4.15"
 description = "Python gRPC Client for EventStoreDB"
 category = "main"
 optional = false
@@ -706,8 +706,8 @@ distlib = [
     {file = "distlib-0.3.4.zip", hash = "sha256:e4b58818180336dc9c529bfb9a0b58728ffc09ad92027a3f30b7cd91e3458579"},
 ]
 esdbclient = [
-    {file = "esdbclient-0.4.14-py3-none-any.whl", hash = "sha256:356670e2e71f3deff9b7ef7a08163a8325a3e594b3d89edffdd0229e482f0c87"},
-    {file = "esdbclient-0.4.14.tar.gz", hash = "sha256:c2ee1bbf67e8b7cbd63388df90bb59a4aa983f4306dc823c7b35871176d0b16e"},
+    {file = "esdbclient-0.4.15-py3-none-any.whl", hash = "sha256:643a48cfed6615b453e6a156f2195be7abd33482a987bf429bc676a1865aef68"},
+    {file = "esdbclient-0.4.15.tar.gz", hash = "sha256:97ec4309d138d7500e3b6e9aadc1c38e7f65f8edfad8e9414fe78c875b91950a"},
 ]
 eventsourcing = [
     {file = "eventsourcing-9.2.14-py3-none-any.whl", hash = "sha256:1ea86e8307b9b6fd3586e0b5dee13c79a84f63a160e37ab8aa5fad43db379646"},
