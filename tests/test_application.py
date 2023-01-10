@@ -4,7 +4,7 @@ from decimal import Decimal
 from itertools import chain
 from uuid import uuid4
 
-from eventsourcing.application import EventSourcedLog, Application
+from eventsourcing.application import Application, EventSourcedLog
 from eventsourcing.domain import Aggregate, DomainEvent
 from eventsourcing.system import NotificationLogReader
 from eventsourcing.tests.application import (
@@ -249,7 +249,7 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         notifications = list(chain(*reader.select(start=max_notification_id1 + 1)))
         self.assertEqual(len(notifications), 12)
 
-    def test_event_sourced_log(self):
+    def test_event_sourced_log(self) -> None:
         class LoggedEvent(DomainEvent):
             name: str
 

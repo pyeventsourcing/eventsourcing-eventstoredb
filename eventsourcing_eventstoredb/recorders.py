@@ -206,7 +206,6 @@ class EventStoreDBApplicationRecorder(
         stop: Optional[int] = None,
         topics: Sequence[str] = (),
     ) -> List[Notification]:
-
         # Assume reading from +1 the last commit position, so
         # subtract 1, and then drop the first event.
         if start > 0:
