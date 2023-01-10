@@ -4,7 +4,8 @@ from decimal import Decimal
 from itertools import chain
 from uuid import uuid4
 
-from eventsourcing.domain import Aggregate
+from eventsourcing.application import EventSourcedLog, Application
+from eventsourcing.domain import Aggregate, DomainEvent
 from eventsourcing.system import NotificationLogReader
 from eventsourcing.tests.application import (
     TIMEIT_FACTOR,
@@ -247,6 +248,31 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         reader = NotificationLogReader(app.notification_log)
         notifications = list(chain(*reader.select(start=max_notification_id1 + 1)))
         self.assertEqual(len(notifications), 12)
+
+    def test_event_sourced_log(self):
+        class LoggedEvent(DomainEvent):
+            name: str
+
+        app = Application()
+        log = EventSourcedLog(
+            events=app.events,
+            originator_id=uuid4(),
+            logged_cls=LoggedEvent,
+        )
+        event = log.trigger_event(name="name1")
+        app.save(event)
+
+        events = list(log.get())
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].name, "name1")
+
+        event = log.trigger_event(name="name2")
+        app.save(event)
+
+        events = list(log.get())
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[0].name, "name1")
+        self.assertEqual(events[1].name, "name2")
 
 
 del ExampleApplicationTestCase
