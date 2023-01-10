@@ -24,7 +24,7 @@ include = ["eventsourcing_eventstoredb/py.typed"]
 [tool.poetry.dependencies]
 python = "^3.7"
 eventsourcing = { version = "~9.2.14" }
-esdbclient = { version = "~0.4.7" }
+esdbclient = { version = "~0.5.0" }
 #eventsourcing = { path = "../eventsourcing/", develop = true }
 #esdbclient = { path = "../esdbclient/", develop = true }
 
