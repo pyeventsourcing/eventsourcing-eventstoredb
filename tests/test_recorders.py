@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from uuid import uuid4
 
-from esdbclient.client import EsdbClient
+from esdbclient import ESDBClient
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -23,7 +23,7 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
     INITIAL_VERSION = 0
 
     def setUp(self) -> None:
-        self.client = EsdbClient(INSECURE_CONNECTION_STRING)
+        self.client = ESDBClient(INSECURE_CONNECTION_STRING)
 
     def create_recorder(self) -> AggregateRecorder:
         return EventStoreDBAggregateRecorder(client=self.client)
@@ -38,7 +38,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
     def setUp(self) -> None:
         # self.original_initial_version = Aggregate.INITIAL_VERSION
         # Aggregate.INITIAL_VERSION = 0
-        self.client = EsdbClient(INSECURE_CONNECTION_STRING)
+        self.client = ESDBClient(INSECURE_CONNECTION_STRING)
 
     def tearDown(self) -> None:
         del self.client

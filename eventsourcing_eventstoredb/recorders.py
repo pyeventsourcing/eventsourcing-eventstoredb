@@ -5,7 +5,7 @@ import sys
 from typing import Any, List, Optional, Sequence
 from uuid import UUID
 
-from esdbclient import ESDB_EVENTS_REGEX, EsdbClient, NewEvent
+from esdbclient import DEFAULT_EXCLUDE_FILTER, ESDBClient, NewEvent
 from esdbclient.exceptions import ExpectedPositionError, StreamNotFound
 from eventsourcing.persistence import (
     AggregateRecorder,
@@ -23,7 +23,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
 
     def __init__(
         self,
-        client: EsdbClient,
+        client: ESDBClient,
         for_snapshotting: bool = False,
         *args: Any,
         **kwargs: Any,
@@ -163,7 +163,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
 
         recorded_events = self.client.read_stream_events(
             stream_name=stream_name,
-            position=position,
+            stream_position=position,
             backwards=desc,
             limit=limit if limit is not None else sys.maxsize,
         )
@@ -216,8 +216,8 @@ class EventStoreDBApplicationRecorder(
             start_commit_position = None
 
         recorded_events = self.client.read_all_events(
-            position=start_commit_position,
-            filter_exclude=(ESDB_EVENTS_REGEX, ".*Snapshot"),
+            commit_position=start_commit_position,
+            filter_exclude=DEFAULT_EXCLUDE_FILTER + (".*Snapshot",),
             filter_include=[re.escape(t) for t in topics] or [],
             limit=limit,
         )
@@ -238,6 +238,7 @@ class EventStoreDBApplicationRecorder(
                 raise ValueError(f"{e}: {recorded_event.stream_name}") from e
 
             # Construct a Notification object from the RecordedEvent object.
+            assert isinstance(recorded_event.commit_position, int)
             notification = Notification(
                 id=recorded_event.commit_position,
                 originator_id=originator_id,
@@ -252,6 +253,7 @@ class EventStoreDBApplicationRecorder(
                 break
 
             # Stop if we reached the 'stop' position.
+            assert isinstance(recorded_event.commit_position, int)
             if stop is not None and recorded_event.commit_position >= stop:
                 break
 
@@ -259,5 +261,5 @@ class EventStoreDBApplicationRecorder(
 
     def max_notification_id(self) -> int:
         return self.client.get_commit_position(
-            filter_exclude=(ESDB_EVENTS_REGEX, ".*Snapshot"),
+            filter_exclude=DEFAULT_EXCLUDE_FILTER + (".*Snapshot",),
         )

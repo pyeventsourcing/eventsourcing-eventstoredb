@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from esdbclient.client import EsdbClient
+from esdbclient import ESDBClient
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -26,11 +26,11 @@ class Factory(InfrastructureFactory):
         eventstoredb_uri = self.env.get(self.EVENTSTOREDB_URI)
         if eventstoredb_uri is None:
             raise EnvironmentError(
-                f"'{self.EVENTSTOREDB_URI}' not found "
+                f"{self.EVENTSTOREDB_URI!r} not found "
                 "in environment with keys: "
-                f"'{', '.join(self.env.create_keys(self.EVENTSTOREDB_URI))}'"
+                f"{', '.join(self.env.create_keys(self.EVENTSTOREDB_URI))!r}"
             )
-        self.client = EsdbClient(uri=eventstoredb_uri)
+        self.client = ESDBClient(uri=eventstoredb_uri)
 
     def aggregate_recorder(self, purpose: str = "events") -> AggregateRecorder:
         return EventStoreDBAggregateRecorder(
