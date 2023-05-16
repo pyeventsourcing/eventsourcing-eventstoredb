@@ -20,6 +20,7 @@ class Factory(InfrastructureFactory):
     """
 
     EVENTSTOREDB_URI = "EVENTSTOREDB_URI"
+    EVENTSTOREDB_ROOT_CERTIFICATES = "EVENTSTOREDB_ROOT_CERTIFICATES"
 
     def __init__(self, env: Environment):
         super().__init__(env)
@@ -30,7 +31,19 @@ class Factory(InfrastructureFactory):
                 "in environment with keys: "
                 f"{', '.join(self.env.create_keys(self.EVENTSTOREDB_URI))!r}"
             )
-        self.client = ESDBClient(uri=eventstoredb_uri)
+        root_certificates = self.env.get(self.EVENTSTOREDB_ROOT_CERTIFICATES)
+        try:
+            self.client = ESDBClient(
+                uri=eventstoredb_uri,
+                root_certificates=root_certificates,
+            )
+        except ValueError as e:
+            if "root_certificates" in e.args[0]:
+                raise EnvironmentError(
+                    "Please configure environment variable "
+                    f"'{self.EVENTSTOREDB_ROOT_CERTIFICATES}' "
+                    "when connecting to a secure server."
+                ) from e
 
     def aggregate_recorder(self, purpose: str = "events") -> AggregateRecorder:
         return EventStoreDBAggregateRecorder(

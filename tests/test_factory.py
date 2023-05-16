@@ -16,8 +16,7 @@ from eventsourcing_eventstoredb.recorders import (
     EventStoreDBAggregateRecorder,
     EventStoreDBApplicationRecorder,
 )
-
-from .common import INSECURE_CONNECTION_STRING
+from tests.common import INSECURE_CONNECTION_STRING
 
 
 class TestFactory(InfrastructureFactoryTestCase):

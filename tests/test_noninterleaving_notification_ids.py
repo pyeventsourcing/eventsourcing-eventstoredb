@@ -4,8 +4,7 @@ from eventsourcing.persistence import ApplicationRecorder
 from eventsourcing.tests.persistence import NonInterleavingNotificationIDsBaseCase
 
 from eventsourcing_eventstoredb.recorders import EventStoreDBApplicationRecorder
-
-from .common import INSECURE_CONNECTION_STRING
+from tests.common import INSECURE_CONNECTION_STRING
 
 
 class TestNonInterleaving(NonInterleavingNotificationIDsBaseCase):

@@ -11,6 +11,12 @@ install-poetry:
 
 .PHONY: install-packages
 install-packages:
+	$(POETRY) --version
+	$(POETRY) install --no-root -vv $(opts)
+
+.PHONY: install
+install:
+	$(POETRY) --version
 	$(POETRY) install -vv $(opts)
 
 .PHONY: install-pre-commit-hooks
@@ -79,18 +85,64 @@ build:
 publish:
 	$(POETRY) publish
 
-.PHONY: start-eventstoredb
-start-eventstoredb: start-eventstoredb-22-10
+.PHONY: start-eventstoredb-21-10-insecure
+start-eventstoredb-21-10-insecure:
+	docker run -d -i -t -p 2114:2113 \
+    --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
+    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2114" \
+    --name my-eventstoredb-insecure \
+    eventstore/eventstore:21.10.9-buster-slim \
+    --insecure
+
+.PHONY: start-eventstoredb-21-10-secure
+start-eventstoredb-21-10-secure:
+	docker run -d -i -t -p 2115:2113 \
+    --env "HOME=/tmp" \
+    --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
+    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2115" \
+    --name my-eventstoredb-secure \
+    eventstore/eventstore:21.10.9-buster-slim \
+    --dev
+
+.PHONY: start-eventstoredb-22-10-insecure
+start-eventstoredb-22-10-insecure:
+	docker run -d -i -t -p 2114:2113 \
+    --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
+    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2114" \
+    --name my-eventstoredb-insecure \
+    eventstore/eventstore:22.10.0-buster-slim \
+    --insecure
+
+.PHONY: start-eventstoredb-22-10-secure
+start-eventstoredb-22-10-secure:
+	docker run -d -i -t -p 2115:2113 \
+    --env "HOME=/tmp" \
+    --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
+    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2115" \
+    --name my-eventstoredb-secure \
+    eventstore/eventstore:22.10.0-buster-slim \
+    --dev
+
+.PHONY: attach-eventstoredb-insecure
+attach-eventstoredb-insecure:
+	docker exec -it my-eventstoredb-insecure /bin/bash
+
+.PHONY: attach-eventstoredb-secure
+attach-eventstoredb-secure:
+	docker exec -it my-eventstoredb-secure /bin/bash
+
+.PHONY: stop-eventstoredb-insecure
+stop-eventstoredb-insecure:
+	docker stop my-eventstoredb-insecure
+	docker rm my-eventstoredb-insecure
+
+.PHONY: stop-eventstoredb-secure
+stop-eventstoredb-secure:
+	docker stop my-eventstoredb-secure
+	docker rm my-eventstoredb-secure
 
 .PHONY: start-eventstoredb-21-10
-start-eventstoredb-21-10:
-	docker run -d --name my-eventstoredb -it -p 2113:2113 -p 1113:1113 eventstore/eventstore:21.10.9-buster-slim --insecure
-
-.PHONY: start-eventstoredb-22-10
-start-eventstoredb-22-10:
-	docker run -d --name my-eventstoredb -it -p 2113:2113 -p 1113:1113 eventstore/eventstore:22.10.0-buster-slim --insecure
+start-eventstoredb-21-10: start-eventstoredb-21-10-insecure start-eventstoredb-21-10-secure
 
 .PHONY: stop-eventstoredb
-stop-eventstoredb:
-	docker stop my-eventstoredb
-	docker rm my-eventstoredb
+stop-eventstoredb: stop-eventstoredb-insecure stop-eventstoredb-secure

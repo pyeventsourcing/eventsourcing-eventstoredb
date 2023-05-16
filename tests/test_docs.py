@@ -1,36 +1,45 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import os
+import ssl
 import sys
 from pathlib import Path
 from subprocess import PIPE, Popen
 from tempfile import NamedTemporaryFile
-from unittest.case import TestCase
+from unittest import TestCase
 
 BASE_DIR = Path(__file__).parents[1]
 
 
 class TestDocs(TestCase):
-    def tearDown(self) -> None:
-        self.clean_env()
+    def setUp(self) -> None:
+        self.setup_environ()
 
-    def clean_env(self) -> None:
-        keys = [
-            "PERSISTENCE_MODULE",
-            "SQLALCHEMY_URL",
-        ]
-        for key in keys:
-            try:
-                del os.environ[key]
-            except KeyError:
-                pass
+    def setup_environ(self) -> None:
+        os.environ["EVENTSTOREDB_ROOT_CERTIFICATES"] = ssl.get_server_certificate(
+            addr=("localhost", 2115)
+        )
+        os.environ["EVENTSTOREDB_URI"] = "esdb://admin:changeit@localhost:2115"
+
+    def tearDown(self) -> None:
+        del os.environ["EVENTSTOREDB_URI"]
+        try:
+            del os.environ["EVENTSTOREDB_ROOT_CERTIFICATES"]
+        except KeyError:
+            pass
 
     def test_readme(self) -> None:
+        self._out = ""
+
         path = BASE_DIR / "README.md"
         if not path.exists():
             self.fail(f"README file not found: {path}")
         self.check_code_snippets_in_file(path)
 
     def check_code_snippets_in_file(self, doc_path: Path) -> None:  # noqa: C901
+        # Extract lines of Python code from the README.md file.
+
         lines = []
         num_code_lines = 0
         num_code_lines_in_block = 0
@@ -39,7 +48,7 @@ class TestDocs(TestCase):
         is_rst = False
         last_line = ""
         is_literalinclude = False
-        with open(doc_path) as doc_file:
+        with doc_path.open() as doc_file:
             for line_index, orig_line in enumerate(doc_file):
                 line = orig_line.strip("\n")
                 if line.startswith("```python"):
@@ -109,9 +118,8 @@ class TestDocs(TestCase):
                         if len(line.strip()):
                             if not line.startswith("    "):
                                 self.fail(
-                                    "Code line needs 4-char indent: {}: {}".format(
-                                        repr(line), doc_path
-                                    )
+                                    f"Code line needs 4-char indent: {repr(line)}: "
+                                    f"{doc_path}"
                                 )
                             # Strip four chars of indentation.
                             line = line[4:]
@@ -124,34 +132,41 @@ class TestDocs(TestCase):
                 lines.append(line)
                 last_line = orig_line
 
-        print("{} lines of code in {}".format(num_code_lines, doc_path))
+        print(f"{num_code_lines} lines of code in {doc_path}")
 
         # Write the code into a temp file.
-        tempfile = NamedTemporaryFile("w+")
-        temp_path = tempfile.name
-        tempfile.writelines("\n".join(lines) + "\n")
-        tempfile.flush()
+        with NamedTemporaryFile("w+") as tempfile:
+            source = "\n".join(lines) + "\n"
+            tempfile.writelines(source)
+            tempfile.flush()
 
-        # Run the code and catch errors.
-        p = Popen(
-            [sys.executable, temp_path],
-            stdout=PIPE,
-            stderr=PIPE,
-            env={"PYTHONPATH": BASE_DIR},
-        )
-        outb, errb = p.communicate()
-        out = outb.decode("utf8")
-        err = errb.decode("utf8")
-        out = out.replace(temp_path, str(doc_path))
-        err = err.replace(temp_path, str(doc_path))
-        exit_status = p.wait()
+            print(Path.cwd())
+            print("\n".join(lines) + "\n")
 
-        print(out)
-        print(err)
+            # Run the code and catch errors.
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(BASE_DIR)
 
-        # Check for errors running the code.
-        if exit_status:
-            self.fail(out + err)
+            p = Popen(
+                [sys.executable, tempfile.name],
+                stdout=PIPE,
+                stderr=PIPE,
+                env=env,
+            )
+            print(sys.executable, tempfile.name, PIPE)
+            out, err = p.communicate()
+            decoded_out = out.decode("utf8").replace(tempfile.name, str(doc_path))
+            decoded_err = err.decode("utf8").replace(tempfile.name, str(doc_path))
+            exit_status = p.wait()
 
-        # Close (deletes) the tempfile.
-        tempfile.close()
+            print(decoded_out)
+            print(decoded_err)
+
+            # Check for errors running the code.
+            if exit_status:
+                self.fail(decoded_out + decoded_err)
+
+
+class TestDocsInsecure(TestDocs):
+    def setup_environ(self) -> None:
+        os.environ["EVENTSTOREDB_URI"] = "esdb://localhost:2114?Tls=false"

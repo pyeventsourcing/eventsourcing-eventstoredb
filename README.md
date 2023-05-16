@@ -56,22 +56,19 @@ class Dog(Aggregate):
 ```
 
 Configure the application to use EventStoreDB. Set environment variable
-`PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`, and set
-`EVENTSTOREDB_URI` to the host and port of your EventStoreDB.
+`PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. Also set
+`EVENTSTOREDB_URI` to an EventStoreDB connection string URI, and
+`EVENTSTOREDB_ROOT_CERTIFICATES` to the SSL/TLS certificate used
+by the EventStoreDB server(s). Please refer to the
+[esdbclient](https://github.com/pyeventsourcing/esdbclient)
+documentation for more information about these settings.
 
 ```python
 school = TrainingSchool(env={
     'PERSISTENCE_MODULE': 'eventsourcing_eventstoredb',
-    'EVENTSTOREDB_URI': 'localhost:2113',
 })
 ```
 
-*NB: SSL/TLS not yet supported:* In case you are running against a cluster, or want to use SSL/TLS certificates,
-you can specify these things in the URI.
-
-```
-    'EVENTSTOREDB_URI': 'esdb://localhost:2111,localhost:2112,localhost:2113?tls&rootCertificate=./certs/ca/ca.crt'
-```
 
 Call application methods from tests and user interfaces.
 
@@ -90,7 +87,6 @@ and get Fido's details again.
 ```python
 school = TrainingSchool(env={
     'PERSISTENCE_MODULE': 'eventsourcing_eventstoredb',
-    'EVENTSTOREDB_URI': 'localhost:2113',
 })
 
 dog_details = school.get_dog(dog_id)
@@ -100,10 +96,10 @@ assert dog_details['tricks'] == ['roll over', 'play dead']
 ```
 
 For more information, please refer to the Python
-[eventsourcing](https://github.com/johnbywater/eventsourcing) library
+[eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
 and the [EventStoreDB](https://www.eventstore.com/) project.
 
-## Developers
+## Contributors
 
 ### Install Poetry
 
@@ -170,10 +166,9 @@ using the following command.
 
     $ make install-packages
 
-If you want to skip the installation of your project's package, use the
-`--no-root` option.
+It's also possible to also install the project in 'editable mode'.
 
-    $ make install-packages --no-root
+    $ make install
 
 Please note, if you create the virtual environment in this way, and then try to
 open the project in PyCharm and configure the project to use this virtual

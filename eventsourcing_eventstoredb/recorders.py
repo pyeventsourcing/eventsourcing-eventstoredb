@@ -6,7 +6,7 @@ from typing import Any, List, Optional, Sequence
 from uuid import UUID
 
 from esdbclient import DEFAULT_EXCLUDE_FILTER, ESDBClient, NewEvent
-from esdbclient.exceptions import ExpectedPositionError, StreamNotFound
+from esdbclient.exceptions import NotFound, WrongExpectedPosition
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -87,6 +87,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                 type=stored_event.topic,
                 data=stored_event.state,
                 metadata=metadata,
+                content_type="application/octet-stream",
             )
             new_events.append(new_event)
         try:
@@ -98,7 +99,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                 expected_position=expected_position,
                 events=new_events,
             )
-        except ExpectedPositionError as e:
+        except WrongExpectedPosition as e:
             raise IntegrityError(e) from e
         except Exception as e:
             raise PersistenceError(e) from e
@@ -161,12 +162,15 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                     else:
                         limit = min(limit, _limit)
 
-        recorded_events = self.client.read_stream_events(
-            stream_name=stream_name,
-            stream_position=position,
-            backwards=desc,
-            limit=limit if limit is not None else sys.maxsize,
-        )
+        try:
+            recorded_events = self.client.iter_stream_events(
+                stream_name=stream_name,
+                stream_position=position,
+                backwards=desc,
+                limit=limit if limit is not None else sys.maxsize,
+            )
+        except NotFound:
+            return []
 
         stored_events = []
         try:
@@ -185,7 +189,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                     state=ev.data,
                 )
                 stored_events.append(se)
-        except StreamNotFound:
+        except NotFound:
             return []
 
         return stored_events
