@@ -43,7 +43,7 @@ class TrainingSchool(Application):
 
 
 class Dog(Aggregate):
-    INITIAL_VERSION = 0
+    INITIAL_VERSION = 0  # for EventStoreDB
 
     @event('Registered')
     def __init__(self, name):
@@ -56,19 +56,29 @@ class Dog(Aggregate):
 ```
 
 Configure the application to use EventStoreDB. Set environment variable
-`PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. Also set
-`EVENTSTOREDB_URI` to an EventStoreDB connection string URI, and
-`EVENTSTOREDB_ROOT_CERTIFICATES` to the SSL/TLS certificate used
-by the EventStoreDB server(s). Please refer to the
-[esdbclient](https://github.com/pyeventsourcing/esdbclient)
-documentation for more information about these settings.
+`PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'` to use this package.
+
+Set environment variable `EVENTSTOREDB_URI` and to an EventStoreDB
+connection string URI. This value will be used as the `uri`
+argument when the `ESDBClient` class is constructed by this package.
+
+If you are connecting to a "secure" EventStoreDB server, please also set
+environment variable `EVENTSTOREDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
+suitable for making a secure gRPC connection to the EventStoreDB server(s).
+This value will be used as the `root_certificates` argument when the
+`ESDBClient` class is constructed by this package.
+
+Please refer to the [esdbclient](https://github.com/pyeventsourcing/esdbclient)
+documentation for details about starting a "secure" or "insecure" EventStoreDB
+server, the "esdb" and "esdb+discover" EventStoreDB connection string
+URI schemes, and how to obtain a suitable SSL/TLS certificate for use
+in the client when connecting to a "secure" EventStoreDB server.
 
 ```python
 school = TrainingSchool(env={
     'PERSISTENCE_MODULE': 'eventsourcing_eventstoredb',
 })
 ```
-
 
 Call application methods from tests and user interfaces.
 
@@ -96,7 +106,8 @@ assert dog_details['tricks'] == ['roll over', 'play dead']
 ```
 
 For more information, please refer to the Python
-[eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
+[eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library, the
+Python [esdbclient](https://github.com/pyeventsourcing/esdbclient) package,
 and the [EventStoreDB](https://www.eventstore.com/) project.
 
 ## Contributors
