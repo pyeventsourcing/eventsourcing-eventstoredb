@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from esdbclient import ESDBClient
+from esdbclient import EventStoreDBClient
 from eventsourcing.persistence import ApplicationRecorder
 from eventsourcing.tests.persistence import NonInterleavingNotificationIDsBaseCase
 
@@ -12,7 +12,7 @@ class TestNonInterleaving(NonInterleavingNotificationIDsBaseCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.client = ESDBClient(INSECURE_CONNECTION_STRING)
+        self.client = EventStoreDBClient(INSECURE_CONNECTION_STRING)
 
     def tearDown(self) -> None:
         del self.client

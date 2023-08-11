@@ -2,11 +2,11 @@
 import json
 import re
 import sys
-from typing import Any, List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Union
 from uuid import UUID
 
-from esdbclient import DEFAULT_EXCLUDE_FILTER, ESDBClient, NewEvent
-from esdbclient.exceptions import NotFound, WrongExpectedPosition
+from esdbclient import DEFAULT_EXCLUDE_FILTER, EventStoreDBClient, NewEvent, StreamState
+from esdbclient.exceptions import NotFound, WrongCurrentVersion
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -23,7 +23,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
 
     def __init__(
         self,
-        client: ESDBClient,
+        client: EventStoreDBClient,
         for_snapshotting: bool = False,
         *args: Any,
         **kwargs: Any,
@@ -52,10 +52,11 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
             stream_name = str(originator_ids[0])
 
         first_originator_version = stored_events[0].originator_version
+        current_version: Union[int, StreamState]
         if first_originator_version == 0:
-            expected_position = None
+            current_version = StreamState.NO_STREAM
         else:
-            expected_position = first_originator_version - 1
+            current_version = first_originator_version - 1
         new_events: List[NewEvent] = []
         for i, stored_event in enumerate(stored_events):
             if stored_event.originator_version != i + first_originator_version:
@@ -93,13 +94,13 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
         try:
             if self.for_snapshotting:
                 stream_name = self.create_snapshot_stream_name(stream_name)
-                expected_position = -1  # Disable OCC.
+                current_version = StreamState.ANY  # Disable OCC.
             commit_position = self.client.append_events(
                 stream_name=stream_name,
-                expected_position=expected_position,
+                current_version=current_version,
                 events=new_events,
             )
-        except WrongExpectedPosition as e:
+        except WrongCurrentVersion as e:
             raise IntegrityError(e) from e
         except Exception as e:
             raise PersistenceError(e) from e
@@ -153,8 +154,8 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
             else:
                 position = None
                 if gt is not None:
-                    current_position = self.client.get_stream_position(stream_name)
-                    if current_position is None:
+                    current_position = self.client.get_current_version(stream_name)
+                    if current_position is StreamState.NO_STREAM:
                         return []
                     _limit = max(0, current_position - gt)
                     if limit is None:
@@ -163,7 +164,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                         limit = min(limit, _limit)
 
         try:
-            recorded_events = self.client.iter_stream_events(
+            recorded_events = self.client.read_stream(
                 stream_name=stream_name,
                 stream_position=position,
                 backwards=desc,
@@ -219,7 +220,7 @@ class EventStoreDBApplicationRecorder(
         else:
             start_commit_position = None
 
-        recorded_events = self.client.read_all_events(
+        recorded_events = self.client.read_all(
             commit_position=start_commit_position,
             filter_exclude=DEFAULT_EXCLUDE_FILTER + (".*Snapshot",),
             filter_include=[re.escape(t) for t in topics] or [],

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from esdbclient import ESDBClient
+from esdbclient import EventStoreDBClient
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -33,7 +33,7 @@ class Factory(InfrastructureFactory):
             )
         root_certificates = self.env.get(self.EVENTSTOREDB_ROOT_CERTIFICATES)
         try:
-            self.client = ESDBClient(
+            self.client = EventStoreDBClient(
                 uri=eventstoredb_uri,
                 root_certificates=root_certificates,
             )
