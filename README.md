@@ -92,6 +92,8 @@ server, the "esdb" and "esdb+discover" EventStoreDB connection string
 URI schemes, and how to obtain a suitable SSL/TLS certificate for use
 in the client when connecting to a "secure" EventStoreDB server.
 
+Construct the application.
+
 ```python
 school = TrainingSchool()
 ```
