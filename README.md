@@ -17,9 +17,10 @@ Please note, it is recommended to install Python packages into a Python virtual 
 
 ## Getting started
 
-Define aggregates and applications in the usual way. Please note, aggregate
-sequences  in EventStoreDB start from position `0`, so set INITIAL_VERSION
-on your aggregate classes accordingly.
+Define aggregates and applications in the usual way. Please note, "streams"
+in EventStoreDB are constrained to start from position `0`, and this package
+expects the `originator_version` of the first event in an aggregate sequence
+to be `0`, so you must set `INITIAL_VERSION` on your aggregate classes to `0`.
 
 ```python
 from eventsourcing.application import Application
