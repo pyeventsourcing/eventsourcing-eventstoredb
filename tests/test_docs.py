@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import ssl
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 from unittest import TestCase
 
 from eventsourcing.utils import clear_topic_cache
@@ -132,10 +132,8 @@ class TestDocs(TestCase):
 
         source = "\n".join(lines) + "\n"
 
-        globals = {}
-        exec(
-            compile(source=source, filename=doc_path, mode="exec"), globals, globals
-        )
+        globals: Dict[Any, Any] = {}
+        exec(compile(source=source, filename=doc_path, mode="exec"), globals, globals)
 
         # # Write the code into a temp file.
         # with NamedTemporaryFile("w+") as tempfile:

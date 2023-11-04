@@ -41,7 +41,6 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
     def _insert_events(
         self, stored_events: List[StoredEvent], **kwargs: Any
     ) -> Optional[Sequence[int]]:
-
         if self.for_snapshotting:
             # Protect against appending old snapshot after new.
             assert len(stored_events) == 1, len(stored_events)
@@ -54,7 +53,10 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
             )
             if len(recorded_snapshots) > 0:
                 last_snapshot = recorded_snapshots[0]
-                if last_snapshot.originator_version > stored_events[0].originator_version:
+                if (
+                    last_snapshot.originator_version
+                    > stored_events[0].originator_version
+                ):
                     return []
         else:
             # Make sure all stored events have same originator ID.
@@ -68,7 +70,10 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
 
             # Make sure stored events have a gapless sequence of originator_versions.
             for i in range(1, len(stored_events)):
-                if stored_events[i].originator_version != i + stored_events[0].originator_version:
+                if (
+                    stored_events[i].originator_version
+                    != i + stored_events[0].originator_version
+                ):
                     raise IntegrityError("Gap detected in originator versions")
 
         # Convert StoredEvent objects to NewEvent objects.
@@ -151,7 +156,10 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
 
         else:
             if lte is not None:
-                position = lte
+                current_position = self.client.get_current_version(stream_name)
+                if current_position is StreamState.NO_STREAM:
+                    return []
+                position = lte = min(current_position, lte)
                 if gt is not None:
                     _limit = max(0, lte - gt)
                     if limit is None:
@@ -170,15 +178,14 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                     else:
                         limit = min(limit, _limit)
 
-        try:
-            recorded_events = self.client.read_stream(
-                stream_name=stream_name,
-                stream_position=position,
-                backwards=desc,
-                limit=limit if limit is not None else sys.maxsize,
-            )
-        except NotFound:
+        if limit == 0:
             return []
+        recorded_events = self.client.read_stream(
+            stream_name=stream_name,
+            stream_position=position,
+            backwards=desc,
+            limit=limit if limit is not None else sys.maxsize,
+        )
 
         stored_events = []
         try:

@@ -5,6 +5,7 @@ from esdbclient import EventStoreDBClient
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
+    ProgrammingError,
     StoredEvent,
 )
 from eventsourcing.tests.persistence import (
@@ -30,6 +31,240 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
 
     def test_insert_and_select(self) -> None:
         super(TestEventStoreDBAggregateRecorder, self).test_insert_and_select()
+        # Construct the recorder.
+        recorder = self.create_recorder()
+
+        # Write three stored events.
+        originator_id1 = uuid4()
+        stored_event1 = StoredEvent(
+            originator_id=originator_id1,
+            originator_version=self.INITIAL_VERSION,
+            topic="topic1",
+            state=b"state1",
+        )
+        stored_event2 = StoredEvent(
+            originator_id=originator_id1,
+            originator_version=self.INITIAL_VERSION + 1,
+            topic="topic2",
+            state=b"state2",
+        )
+        stored_event3 = StoredEvent(
+            originator_id=originator_id1,
+            originator_version=self.INITIAL_VERSION + 2,
+            topic="topic3",
+            state=b"state3",
+        )
+
+        # Insert three events.
+        recorder.insert_events([stored_event1, stored_event2, stored_event3])
+
+        # Select events with gt, lte and limit args.
+        self.assertEqual(  # reads from after start, limited by limit
+            recorder.select_events(originator_id1, gt=0, lte=30, limit=0),
+            [],
+        )
+        self.assertEqual(  # reads from after start, limited by limit
+            recorder.select_events(originator_id1, gt=0, lte=30, limit=1),
+            [stored_event2],
+        )
+        self.assertEqual(  # reads from after start, limited by limit
+            recorder.select_events(originator_id1, gt=0, lte=30, limit=2),
+            [stored_event2, stored_event3],
+        )
+        self.assertEqual(  # reads from after start, limited by lte
+            recorder.select_events(originator_id1, gt=0, lte=0, limit=10),
+            [],
+        )
+        self.assertEqual(  # reads from after start, limited by lte
+            recorder.select_events(originator_id1, gt=0, lte=1, limit=10),
+            [stored_event2],
+        )
+        self.assertEqual(  # reads from after start, limited by lte
+            recorder.select_events(originator_id1, gt=0, lte=2, limit=10),
+            [stored_event2, stored_event3],
+        )
+        self.assertEqual(  # reads from after start, limited by lte
+            recorder.select_events(originator_id1, gt=1, lte=2, limit=10),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads from after start, limited by lte
+            recorder.select_events(originator_id1, gt=2, lte=10, limit=10),
+            [],
+        )
+
+        # Select events with lte and limit args.
+        self.assertEqual(  # read limited by limit
+            recorder.select_events(originator_id1, lte=10, limit=1),
+            [stored_event1],
+        )
+        self.assertEqual(  # read limited by limit
+            recorder.select_events(originator_id1, lte=10, limit=2),
+            [stored_event1, stored_event2],
+        )
+        self.assertEqual(  # read limited by lte
+            recorder.select_events(originator_id1, lte=0, limit=10),
+            [stored_event1],
+        )
+        self.assertEqual(  # read limited by lte
+            recorder.select_events(originator_id1, lte=1, limit=10),
+            [stored_event1, stored_event2],
+        )
+        self.assertEqual(  # read limited by lte
+            recorder.select_events(originator_id1, lte=10, limit=10),
+            [stored_event1, stored_event2, stored_event3],
+        )
+        self.assertEqual(  # read limited by both lte and limit
+            recorder.select_events(originator_id1, lte=1, limit=1),
+            [stored_event1],
+        )
+
+        # Select events with desc, gt, lte.
+        self.assertEqual(  # reads from after end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=5, lte=10),
+            [],
+        )
+        self.assertEqual(  # reads from after end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=2, lte=10),
+            [],
+        )
+        self.assertEqual(  # reads from after end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=1, lte=10),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads from before end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=1, lte=1),
+            [],
+        )
+        self.assertEqual(  # reads from before end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=1),
+            [stored_event2],
+        )
+
+        # Select events with desc, gt, lte and limit args.
+        self.assertEqual(  # reads from after end, limited by given limit
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=3, limit=1),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads from end, limited by given limit
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=2, limit=1),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads from before end, limited by given limit
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=1, limit=1),
+            [stored_event2],
+        )
+
+        self.assertEqual(  # reads from after end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=3, limit=10),
+            [stored_event3, stored_event2],
+        )
+        self.assertEqual(  # reads from end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=2, limit=10),
+            [stored_event3, stored_event2],
+        )
+        self.assertEqual(  # reads from before end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=1, limit=10),
+            [stored_event2],
+        )
+
+        self.assertEqual(  # reads from after end, limited by gt and limit
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=3, limit=2),
+            [stored_event3, stored_event2],
+        )
+        self.assertEqual(  # reads from end, limited by gt and limit
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=2, limit=2),
+            [stored_event3, stored_event2],
+        )
+        self.assertEqual(  # reads from before end, limited by gt and limit
+            recorder.select_events(originator_id1, desc=True, gt=0, lte=1, limit=1),
+            [stored_event2],
+        )
+
+        # Select events with desc, lte (NO STREAM).
+        self.assertEqual(  # reads from after end, limited by limit
+            recorder.select_events(uuid4(), desc=True, lte=10, limit=1),
+            [],
+        )
+
+        # Select events with desc, lte and limit args.
+        self.assertEqual(  # reads from after end, limited by limit
+            recorder.select_events(originator_id1, desc=True, lte=10, limit=1),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads from end, limited by limit
+            recorder.select_events(originator_id1, desc=True, lte=2, limit=1),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads from before end, limited by limit
+            recorder.select_events(originator_id1, desc=True, lte=1, limit=1),
+            [stored_event2],
+        )
+        self.assertEqual(  # reads from before end, limited by start of stream
+            recorder.select_events(originator_id1, desc=True, lte=1, limit=10),
+            [stored_event2, stored_event1],
+        )
+
+        # Select events with desc, gt
+        self.assertEqual(  # reads until after end
+            recorder.select_events(originator_id1, desc=True, gt=10),
+            [],
+        )
+        self.assertEqual(  # reads until end
+            recorder.select_events(originator_id1, desc=True, gt=1),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads until before end
+            recorder.select_events(originator_id1, desc=True, gt=0),
+            [stored_event3, stored_event2],
+        )
+
+        # Select events with desc, gt (NO STREAM)
+        self.assertEqual(  # reads until before end
+            recorder.select_events(uuid4(), desc=True, gt=1),
+            [],
+        )
+
+        # Select events with desc, gt, limit
+        self.assertEqual(  # reads until after end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=10, limit=10),
+            [],
+        )
+        self.assertEqual(  # reads until end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=1, limit=10),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads until before end, limited by gt
+            recorder.select_events(originator_id1, desc=True, gt=0, limit=10),
+            [stored_event3, stored_event2],
+        )
+        self.assertEqual(  # reads until before end, limited by limit
+            recorder.select_events(originator_id1, desc=True, gt=0, limit=1),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads until before end, limited by gt and limit
+            recorder.select_events(originator_id1, desc=True, gt=1, limit=1),
+            [stored_event3],
+        )
+        self.assertEqual(  # reads until before end, limited by limit
+            recorder.select_events(originator_id1, desc=True, gt=0, limit=2),
+            [stored_event3, stored_event2],
+        )
+
+        # Can't store events in more than one stream.
+        with self.assertRaises(ProgrammingError):
+            stored_event4 = StoredEvent(
+                originator_id=uuid4(),
+                originator_version=self.INITIAL_VERSION,
+                topic="topic4",
+                state=b"state4",
+            )
+            stored_event5 = StoredEvent(
+                originator_id=uuid4(),
+                originator_version=self.INITIAL_VERSION,
+                topic="topic5",
+                state=b"state5",
+            )
+            recorder.insert_events([stored_event4, stored_event5])
 
 
 class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):

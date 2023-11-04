@@ -44,6 +44,8 @@ class Factory(InfrastructureFactory):
                     f"'{self.EVENTSTOREDB_ROOT_CERTIFICATES}' "
                     "when connecting to a secure server."
                 ) from e
+            else:
+                raise
 
     def aggregate_recorder(self, purpose: str = "events") -> AggregateRecorder:
         return EventStoreDBAggregateRecorder(
@@ -58,5 +60,6 @@ class Factory(InfrastructureFactory):
         raise NotImplementedError()
 
     def __del__(self) -> None:
-        del self.client
-        # self.client.close()
+        if hasattr(self, "client"):
+            del self.client
+            # self.client.close()

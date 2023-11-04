@@ -31,8 +31,14 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
     def tearDown(self) -> None:
         Aggregate.INITIAL_VERSION = self.original_initial_version
-        del os.environ["PERSISTENCE_MODULE"]
-        del os.environ["EVENTSTOREDB_URI"]
+        try:
+            del os.environ["PERSISTENCE_MODULE"]
+        except KeyError:
+            pass
+        try:
+            del os.environ["EVENTSTOREDB_URI"]
+        except KeyError:
+            pass
         super().tearDown()
 
     def test_example_application(self) -> None:
@@ -273,6 +279,18 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         self.assertEqual(len(events), 2)
         self.assertEqual(events[0].name, "name1")
         self.assertEqual(events[1].name, "name2")
+
+    def test_construct_without_uri(self) -> None:
+        del os.environ["EVENTSTOREDB_URI"]
+        with self.assertRaises(EnvironmentError) as cm:
+            BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
+        self.assertIn("EVENTSTOREDB_URI", str(cm.exception))
+
+    def test_construct_secure_without_root_certificates(self) -> None:
+        os.environ["EVENTSTOREDB_URI"] = "esdb://localhost"
+        with self.assertRaises(EnvironmentError) as cm:
+            BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
+        self.assertIn("EVENTSTOREDB_ROOT_CERTIFICATES", str(cm.exception))
 
 
 del ExampleApplicationTestCase
