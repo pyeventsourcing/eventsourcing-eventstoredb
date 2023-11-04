@@ -2,6 +2,7 @@
 
 POETRY ?= poetry
 POETRY_INSTALLER_URL ?= https://install.python-poetry.org
+POETRY_VERSION=1.5.1
 
 
 .PHONY: install-poetry
