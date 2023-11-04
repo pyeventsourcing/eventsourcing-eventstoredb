@@ -4,6 +4,9 @@ POETRY ?= poetry
 POETRY_INSTALLER_URL ?= https://install.python-poetry.org
 POETRY_VERSION=1.5.1
 
+EVENTSTORE_IMAGE_NAME ?= eventstore/eventstore
+EVENTSTORE_IMAGE_TAG ?= 23.10.0-bookworm-slim
+
 
 .PHONY: install-poetry
 install-poetry:
@@ -86,42 +89,23 @@ build:
 publish:
 	$(POETRY) publish
 
-.PHONY: start-eventstoredb-21-10-insecure
-start-eventstoredb-21-10-insecure:
-	docker run -d -i -t -p 2114:2113 \
+.PHONY: start-eventstoredb-insecure
+start-eventstoredb-insecure:
+	docker run -d -i -t -p 2113:2113 \
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
-    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2114" \
+    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2113" \
     --name my-eventstoredb-insecure \
-    eventstore/eventstore:21.10.9-buster-slim \
+    $(EVENTSTORE_IMAGE_NAME):$(EVENTSTORE_IMAGE_TAG) \
     --insecure
 
-.PHONY: start-eventstoredb-21-10-secure
-start-eventstoredb-21-10-secure:
-	docker run -d -i -t -p 2115:2113 \
-    --env "HOME=/tmp" \
-    --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
-    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2115" \
-    --name my-eventstoredb-secure \
-    eventstore/eventstore:21.10.9-buster-slim \
-    --dev
-
-.PHONY: start-eventstoredb-22-10-insecure
-start-eventstoredb-22-10-insecure:
+.PHONY: start-eventstoredb-secure
+start-eventstoredb-secure:
 	docker run -d -i -t -p 2114:2113 \
+    --env "HOME=/tmp" \
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2114" \
-    --name my-eventstoredb-insecure \
-    eventstore/eventstore:22.10.0-buster-slim \
-    --insecure
-
-.PHONY: start-eventstoredb-22-10-secure
-start-eventstoredb-22-10-secure:
-	docker run -d -i -t -p 2115:2113 \
-    --env "HOME=/tmp" \
-    --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
-    --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2115" \
     --name my-eventstoredb-secure \
-    eventstore/eventstore:22.10.0-buster-slim \
+    $(EVENTSTORE_IMAGE_NAME):$(EVENTSTORE_IMAGE_TAG) \
     --dev
 
 .PHONY: attach-eventstoredb-insecure
@@ -142,8 +126,13 @@ stop-eventstoredb-secure:
 	docker stop my-eventstoredb-secure
 	docker rm my-eventstoredb-secure
 
-.PHONY: start-eventstoredb-21-10
-start-eventstoredb-21-10: start-eventstoredb-21-10-insecure start-eventstoredb-21-10-secure
+.PHONY: start-eventstoredb
+start-eventstoredb: start-eventstoredb-insecure start-eventstoredb-secure
+	@echo "Waiting for containers to be healthy"
+	@until docker ps | grep "my-eventstoredb" | grep -in "healthy" | wc -l | grep -in 2 > /dev/null; do printf "." && sleep 1; done; echo ""
+	@docker ps
+	@sleep 15
+
 
 .PHONY: stop-eventstoredb
 stop-eventstoredb: stop-eventstoredb-insecure stop-eventstoredb-secure

@@ -3,27 +3,22 @@ from __future__ import annotations
 
 import os
 import ssl
-import sys
 from pathlib import Path
-from subprocess import PIPE, Popen
-from tempfile import NamedTemporaryFile
+from typing import List
 from unittest import TestCase
+
+from eventsourcing.utils import clear_topic_cache
 
 BASE_DIR = Path(__file__).parents[1]
 
 
 class TestDocs(TestCase):
-    def setUp(self) -> None:
-        self.setup_environ()
-
-    def setup_environ(self) -> None:
-        os.environ["EVENTSTOREDB_ROOT_CERTIFICATES"] = ssl.get_server_certificate(
-            addr=("localhost", 2115)
-        )
-        os.environ["EVENTSTOREDB_URI"] = "esdb://admin:changeit@localhost:2115"
-
     def tearDown(self) -> None:
-        del os.environ["EVENTSTOREDB_URI"]
+        clear_topic_cache()
+        try:
+            del os.environ["EVENTSTOREDB_URI"]
+        except KeyError:
+            pass
         try:
             del os.environ["EVENTSTOREDB_ROOT_CERTIFICATES"]
         except KeyError:
@@ -133,40 +128,64 @@ class TestDocs(TestCase):
                 last_line = orig_line
 
         print(f"{num_code_lines} lines of code in {doc_path}")
+        self.substitute_lines(lines)
 
-        # Write the code into a temp file.
-        with NamedTemporaryFile("w+") as tempfile:
-            source = "\n".join(lines) + "\n"
-            tempfile.writelines(source)
-            tempfile.flush()
+        source = "\n".join(lines) + "\n"
 
-            print(Path.cwd())
-            print("\n".join(lines) + "\n")
+        exec(
+            compile(source=source, filename=doc_path, mode="exec"), globals(), globals()
+        )
 
-            # Run the code and catch errors.
-            env = os.environ.copy()
-            env["PYTHONPATH"] = str(BASE_DIR)
+    def substitute_lines(self, lines: List[str]) -> None:
+        pass
 
-            p = Popen(
-                [sys.executable, tempfile.name],
-                stdout=PIPE,
-                stderr=PIPE,
-                env=env,
-            )
-            print(sys.executable, tempfile.name, PIPE)
-            out, err = p.communicate()
-            decoded_out = out.decode("utf8").replace(tempfile.name, str(doc_path))
-            decoded_err = err.decode("utf8").replace(tempfile.name, str(doc_path))
-            exit_status = p.wait()
+        # # Write the code into a temp file.
+        # with NamedTemporaryFile("w+") as tempfile:
+        #     source = "\n".join(lines) + "\n"
+        #     tempfile.writelines(source)
+        #     tempfile.flush()
+        #
+        #     print(Path.cwd())
+        #     print("\n".join(lines) + "\n")
+        #
+        #     # Run the code and catch errors.
+        #     env = os.environ.copy()
+        #     env["PYTHONPATH"] = str(BASE_DIR)
+        #
+        #     p = Popen(
+        #         [sys.executable, tempfile.name],
+        #         stdout=PIPE,
+        #         stderr=PIPE,
+        #         env=env,
+        #     )
+        #     print(sys.executable, tempfile.name, PIPE)
+        #     out, err = p.communicate()
+        #     decoded_out = out.decode("utf8").replace(tempfile.name, str(doc_path))
+        #     decoded_err = err.decode("utf8").replace(tempfile.name, str(doc_path))
+        #     exit_status = p.wait()
+        #
+        #     print(decoded_out)
+        #     print(decoded_err)
+        #
+        #     # Check for errors running the code.
+        #     if exit_status:
+        #         self.fail(decoded_out + decoded_err)
 
-            print(decoded_out)
-            print(decoded_err)
 
-            # Check for errors running the code.
-            if exit_status:
-                self.fail(decoded_out + decoded_err)
-
-
-class TestDocsInsecure(TestDocs):
-    def setup_environ(self) -> None:
-        os.environ["EVENTSTOREDB_URI"] = "esdb://localhost:2114?Tls=false"
+class TestDocsSecure(TestDocs):
+    def substitute_lines(self, lines: List[str]) -> None:
+        for i in range(len(lines)):
+            line = lines[i]
+            if line.startswith("os.environ['EVENTSTOREDB_URI']"):
+                line = (
+                    "os.environ['EVENTSTOREDB_URI'] ="
+                    " 'esdb://admin:changeit@localhost:2114'"
+                )
+            elif line.startswith("os.environ['EVENTSTOREDB_ROOT_CERTIFICATES']"):
+                root_certificates = ssl.get_server_certificate(addr=("localhost", 2114))
+                root_certificates = "\\n".join(root_certificates.split("\n"))
+                line = (
+                    "os.environ['EVENTSTOREDB_ROOT_CERTIFICATES'] = '%s'"
+                    % root_certificates
+                )
+            lines[i] = line

@@ -55,18 +55,35 @@ class Dog(Aggregate):
         self.tricks.append(trick)
 ```
 
-Configure the application to use EventStoreDB. Set environment variable
-`PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'` to use this package.
+Configure the application to use EventStoreDB by setting the application environment
+variable `PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. You can do this
+in actual environment variables, by passing in an `env` argument when constructing
+the application object, or by setting `env` on the application class.
 
-Set environment variable `EVENTSTOREDB_URI` and to an EventStoreDB
+```python
+import os
+
+os.environ['PERSISTENCE_MODULE'] = 'eventsourcing_eventstoredb'
+```
+
+Also set environment variable `EVENTSTOREDB_URI` and to an EventStoreDB
 connection string URI. This value will be used as the `uri`
 argument when the `ESDBClient` class is constructed by this package.
 
-If you are connecting to a "secure" EventStoreDB server, please also set
+```python
+os.environ['EVENTSTOREDB_URI'] = 'esdb://localhost:2113?Tls=false'
+```
+
+If you are connecting to a "secure" EventStoreDB server, also set
 environment variable `EVENTSTOREDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
 suitable for making a secure gRPC connection to the EventStoreDB server(s).
 This value will be used as the `root_certificates` argument when the
 `ESDBClient` class is constructed by this package.
+
+
+```python
+os.environ['EVENTSTOREDB_ROOT_CERTIFICATES'] = '<PEM encoded SSL/TLS root certificates>'
+```
 
 Please refer to the [esdbclient](https://github.com/pyeventsourcing/esdbclient)
 documentation for details about starting a "secure" or "insecure" EventStoreDB
@@ -75,9 +92,7 @@ URI schemes, and how to obtain a suitable SSL/TLS certificate for use
 in the client when connecting to a "secure" EventStoreDB server.
 
 ```python
-school = TrainingSchool(env={
-    'PERSISTENCE_MODULE': 'eventsourcing_eventstoredb',
-})
+school = TrainingSchool()
 ```
 
 Call application methods from tests and user interfaces.
@@ -95,9 +110,7 @@ To see the events have been saved, we can reconstruct the application
 and get Fido's details again.
 
 ```python
-school = TrainingSchool(env={
-    'PERSISTENCE_MODULE': 'eventsourcing_eventstoredb',
-})
+school = TrainingSchool()
 
 dog_details = school.get_dog(dog_id)
 
