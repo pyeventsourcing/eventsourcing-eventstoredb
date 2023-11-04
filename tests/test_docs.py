@@ -132,12 +132,10 @@ class TestDocs(TestCase):
 
         source = "\n".join(lines) + "\n"
 
+        globals = {}
         exec(
-            compile(source=source, filename=doc_path, mode="exec"), globals(), globals()
+            compile(source=source, filename=doc_path, mode="exec"), globals, globals
         )
-
-    def substitute_lines(self, lines: List[str]) -> None:
-        pass
 
         # # Write the code into a temp file.
         # with NamedTemporaryFile("w+") as tempfile:
@@ -170,6 +168,9 @@ class TestDocs(TestCase):
         #     # Check for errors running the code.
         #     if exit_status:
         #         self.fail(decoded_out + decoded_err)
+
+    def substitute_lines(self, lines: List[str]) -> None:
+        pass
 
 
 class TestDocsSecure(TestDocs):
