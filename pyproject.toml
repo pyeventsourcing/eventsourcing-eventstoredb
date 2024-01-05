@@ -47,7 +47,7 @@ pre-commit = "*"
 pre-commit-hooks = "*"
 pytest = "*"
 pytest-cov = "*"
-pycryptodome = "~3.14.1"
+pycryptodome = "~3.19.1"
 types-protobuf = "*"
 
 [build-system]
