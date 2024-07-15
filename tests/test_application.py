@@ -4,6 +4,7 @@ from decimal import Decimal
 from itertools import chain
 from uuid import uuid4
 
+from esdbclient.exceptions import SSLError
 from eventsourcing.application import Application, EventSourcedLog
 from eventsourcing.domain import Aggregate, DomainEvent
 from eventsourcing.system import NotificationLogReader
@@ -287,10 +288,9 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         self.assertIn("EVENTSTOREDB_URI", str(cm.exception))
 
     def test_construct_secure_without_root_certificates(self) -> None:
-        os.environ["EVENTSTOREDB_URI"] = "esdb://localhost"
-        with self.assertRaises(EnvironmentError) as cm:
+        os.environ["EVENTSTOREDB_URI"] = "esdb://admin:changeit@localhost"
+        with self.assertRaises(SSLError):
             BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
-        self.assertIn("EVENTSTOREDB_ROOT_CERTIFICATES", str(cm.exception))
 
 
 del ExampleApplicationTestCase

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "eventsourcing-eventstoredb"
-version = "1.0.1"
+version = "1.1"
 description = "Python package for eventsourcing with EventStoreDB"
 authors = [
     "John Bywater <john.bywater@appropriatesoftware.net>",
@@ -15,7 +15,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python",
@@ -26,11 +25,11 @@ repository = "https://github.com/pyeventsourcing/eventsourcing-eventstoredb"
 include = ["eventsourcing_eventstoredb/py.typed"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 eventsourcing = { version = "~9.2.14" }
 #eventsourcing = { path = "../eventsourcing/", develop = true }
 #esdbclient = { path = "../esdbclient/", develop = true }
-esdbclient = "^1"
+esdbclient = { version = "~1.1.0" }
 
 
 [tool.poetry.dev-dependencies]

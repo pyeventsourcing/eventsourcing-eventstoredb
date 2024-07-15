@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+from typing import cast
 from uuid import uuid4
 
-from esdbclient import EventStoreDBClient
+from esdbclient import EventStoreDBClient, NewEvent, StreamState
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
+    PersistenceError,
     ProgrammingError,
     StoredEvent,
 )
@@ -475,6 +477,29 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
         self.assertEqual(notifications[1].originator_id, originator_id1)
         self.assertEqual(notifications[1].originator_version, self.INITIAL_VERSION + 1)
+
+        # Cover exception handling when stream name is not a UUID.
+        max_notification_id4 = recorder.max_notification_id()
+
+        cast(EventStoreDBApplicationRecorder, recorder).client.append_to_stream(
+            stream_name=f"not-a-uuid-{uuid4()}",
+            events=NewEvent(type="SomethingHappened", data=b"{}"),
+            current_version=StreamState.NO_STREAM,
+        )
+        with self.assertRaises(ValueError) as cm1:
+            recorder.select_notifications(
+                start=max_notification_id4 + 1, limit=10, stop=max_notification_id2
+            )
+        self.assertIn("badly formed hexadecimal UUID string", str(cm1.exception))
+
+        # Cover non-wrong-current-version exception handling when appending events.
+        cast(EventStoreDBApplicationRecorder, recorder).client.close()
+        cast(
+            EventStoreDBApplicationRecorder, recorder
+        ).client.connection_spec._targets = ["127.0.0.1:1000"]
+        with self.assertRaises(PersistenceError) as cm2:
+            recorder.insert_events([stored_event3])
+        self.assertIn("failed to connect", str(cm2.exception))
 
     def test_concurrent_no_conflicts(self) -> None:
         super().test_concurrent_no_conflicts()

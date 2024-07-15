@@ -32,20 +32,10 @@ class Factory(InfrastructureFactory):
                 f"{', '.join(self.env.create_keys(self.EVENTSTOREDB_URI))!r}"
             )
         root_certificates = self.env.get(self.EVENTSTOREDB_ROOT_CERTIFICATES)
-        try:
-            self.client = EventStoreDBClient(
-                uri=eventstoredb_uri,
-                root_certificates=root_certificates,
-            )
-        except ValueError as e:
-            if "root_certificates" in e.args[0]:
-                raise EnvironmentError(
-                    "Please configure environment variable "
-                    f"'{self.EVENTSTOREDB_ROOT_CERTIFICATES}' "
-                    "when connecting to a secure server."
-                ) from e
-            else:
-                raise
+        self.client = EventStoreDBClient(
+            uri=eventstoredb_uri,
+            root_certificates=root_certificates,
+        )
 
     def aggregate_recorder(self, purpose: str = "events") -> AggregateRecorder:
         return EventStoreDBAggregateRecorder(

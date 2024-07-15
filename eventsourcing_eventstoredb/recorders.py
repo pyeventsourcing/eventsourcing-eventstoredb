@@ -51,13 +51,12 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                     limit=1,
                 )
             )
-            if len(recorded_snapshots) > 0:
-                last_snapshot = recorded_snapshots[0]
-                if (
-                    last_snapshot.originator_version
-                    > stored_events[0].originator_version
-                ):
-                    return []
+            if (
+                len(recorded_snapshots) > 0
+                and recorded_snapshots[0].originator_version
+                > stored_events[0].originator_version
+            ):
+                return []
         else:
             # Make sure all stored events have same originator ID.
             originator_ids = list(set([e.originator_id for e in stored_events]))
@@ -229,8 +228,7 @@ class EventStoreDBApplicationRecorder(
         # subtract 1, and then drop the first event.
         if start > 0:
             start_commit_position = start - 1
-            if limit is not None:
-                limit += 1
+            limit += 1
         else:
             start_commit_position = None
 

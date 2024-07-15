@@ -96,7 +96,8 @@ start-eventstoredb-insecure:
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2113" \
     --name my-eventstoredb-insecure \
     $(EVENTSTORE_IMAGE_NAME):$(EVENTSTORE_IMAGE_TAG) \
-    --insecure
+    --insecure \
+    --enable-atom-pub-over-http
 
 .PHONY: start-eventstoredb-secure
 start-eventstoredb-secure:
