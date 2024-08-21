@@ -75,8 +75,10 @@ argument when the `ESDBClient` class is constructed by this package.
 os.environ['EVENTSTOREDB_URI'] = 'esdb://localhost:2113?Tls=false'
 ```
 
-If you are connecting to a "secure" EventStoreDB server, also set
-environment variable `EVENTSTOREDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
+If you are connecting to a "secure" EventStoreDB server, unless the
+root certificate of the certificate authority used to generate the
+server's certificate is installed locally, then also set environment
+variable `EVENTSTOREDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
 suitable for making a secure gRPC connection to the EventStoreDB server(s).
 This value will be used as the `root_certificates` argument when the
 `ESDBClient` class is constructed by this package.
