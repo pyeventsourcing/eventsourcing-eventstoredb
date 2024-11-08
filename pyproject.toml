@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "eventsourcing-eventstoredb"
-version = "1.1.1"
+version = "1.1.2"
 description = "Python package for eventsourcing with EventStoreDB"
 authors = [
     "John Bywater <john.bywater@appropriatesoftware.net>",
