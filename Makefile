@@ -4,8 +4,8 @@ POETRY ?= poetry
 POETRY_INSTALLER_URL ?= https://install.python-poetry.org
 POETRY_VERSION=1.5.1
 
-EVENTSTORE_IMAGE_NAME ?= eventstore/eventstore
-EVENTSTORE_IMAGE_TAG ?= 23.10.0-bookworm-slim
+# EVENTSTORE_DOCKER_IMAGE ?= eventstore/eventstore:23.10.0-bookworm-slim
+EVENTSTORE_DOCKER_IMAGE ?= docker.eventstore.com/eventstore/eventstoredb-ee:24.10.0-x64-8.0-bookworm-slim
 
 
 .PHONY: install-poetry
@@ -95,7 +95,7 @@ start-eventstoredb-insecure:
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2113" \
     --name my-eventstoredb-insecure \
-    $(EVENTSTORE_IMAGE_NAME):$(EVENTSTORE_IMAGE_TAG) \
+    $(EVENTSTORE_DOCKER_IMAGE) \
     --insecure \
     --enable-atom-pub-over-http
 
@@ -106,7 +106,7 @@ start-eventstoredb-secure:
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2114" \
     --name my-eventstoredb-secure \
-    $(EVENTSTORE_IMAGE_NAME):$(EVENTSTORE_IMAGE_TAG) \
+    $(EVENTSTORE_DOCKER_IMAGE) \
     --dev
 
 .PHONY: attach-eventstoredb-insecure

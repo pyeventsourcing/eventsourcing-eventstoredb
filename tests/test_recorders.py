@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
+from concurrent.futures.thread import ThreadPoolExecutor
+from datetime import datetime
 from typing import cast
 from uuid import uuid4
 
 from esdbclient import EventStoreDBClient, NewEvent, StreamState
+from esdbclient.exceptions import UnknownError
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -271,6 +276,7 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
 
 class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
     INITIAL_VERSION = 0
+    EXPECT_CONTIGUOUS_NOTIFICATION_IDS = False
 
     def setUp(self) -> None:
         # self.original_initial_version = Aggregate.INITIAL_VERSION
@@ -292,6 +298,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Get the current max notification ID.
         max_notification_id1 = recorder.max_notification_id()
+        assert isinstance(max_notification_id1, int)
 
         # Check notifications methods work when there aren't any.
         self.assertEqual(
@@ -299,13 +306,28 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
             max_notification_id1,
         )
         self.assertEqual(
-            len(recorder.select_notifications(max_notification_id1 + 1, 10)),
+            len(
+                recorder.select_notifications(
+                    max_notification_id1, 10, inclusive_of_start=False
+                )
+            ),
             0,
         )
         self.assertEqual(
             len(
                 recorder.select_notifications(
-                    max_notification_id1 + 1, 3, topics=["topic1"]
+                    max_notification_id1, 3, topics=["topic1"], inclusive_of_start=False
+                )
+            ),
+            0,
+        )
+
+        # Note: max_notification_id1 + 1 would ordinarily cause an "invalid position"
+        # database error, but because no subsequent events have been written it doesn't...
+        self.assertEqual(
+            len(
+                recorder.select_notifications(
+                    max_notification_id1 + 1, 10, inclusive_of_start=False
                 )
             ),
             0,
@@ -351,6 +373,8 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Check the last one is the same as the current max notification ID.
         max_notification_id2 = recorder.max_notification_id()
+        assert isinstance(max_notification_id2, int)
+
         self.assertEqual(notification_ids[-1], max_notification_id2)
 
         # Insert the third event.
@@ -365,6 +389,8 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Check the last one is the same as the current max notification ID.
         max_notification_id3 = recorder.max_notification_id()
+        assert isinstance(max_notification_id3, int)
+
         self.assertEqual(notification_ids[-1], max_notification_id3)
 
         # Select the recorded events for each originator ID.
@@ -381,8 +407,16 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(stored_events2[0].originator_id, originator_id2)
         self.assertEqual(stored_events2[0].originator_version, self.INITIAL_VERSION)
 
-        # Select notifications from initial max notification ID.
-        notifications = recorder.select_notifications(max_notification_id1 + 1, 10)
+        # InvalidPosition error when selecting from max_notification_id1 + 1.
+        with self.assertRaises(UnknownError) as cm:
+            recorder.select_notifications(
+                max_notification_id1 + 1, 10, inclusive_of_start=False
+            )
+            self.assertIn("InvalidPostion", str(cm.exception))
+
+        notifications = recorder.select_notifications(
+            max_notification_id1, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 3)
         self.assertEqual(notifications[0].originator_id, originator_id1)
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
@@ -402,7 +436,10 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Select notification by topic (all topics).
         notifications = recorder.select_notifications(
-            max_notification_id1 + 1, 10, topics=["topic1", "topic2", "topic3"]
+            max_notification_id1,
+            10,
+            topics=["topic1", "topic2", "topic3"],
+            inclusive_of_start=False,
         )
 
         # Check we got three notifications.
@@ -416,7 +453,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Select notification by topic (topic1 only).
         notifications = recorder.select_notifications(
-            max_notification_id1 + 1, 10, topics=["topic1"]
+            max_notification_id1, 10, topics=["topic1"], inclusive_of_start=False
         )
 
         # Check we got the correct notification.
@@ -426,7 +463,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Select notification by topic (topic2 only).
         notifications = recorder.select_notifications(
-            max_notification_id1 + 1, 10, topics=["topic2"]
+            max_notification_id1, 10, topics=["topic2"], inclusive_of_start=False
         )
 
         # Check we got the correct notification.
@@ -436,7 +473,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Select notification by topic (topic3 only).
         notifications = recorder.select_notifications(
-            max_notification_id1 + 1, 10, topics=["topic3"]
+            max_notification_id1, 10, topics=["topic3"], inclusive_of_start=False
         )
 
         # Check we got the correct notification.
@@ -446,7 +483,10 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Select notification by topic (topic1 and topic3 only).
         notifications = recorder.select_notifications(
-            max_notification_id1 + 1, 10, topics=["topic1", "topic3"]
+            max_notification_id1,
+            10,
+            topics=["topic1", "topic3"],
+            inclusive_of_start=False,
         )
 
         # Check we got the correct notifications.
@@ -457,20 +497,35 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(notifications[1].originator_version, self.INITIAL_VERSION)
 
         # Select a limited number of notifications from initial position.
-        notifications = recorder.select_notifications(max_notification_id1 + 1, 1)
+        notifications = recorder.select_notifications(
+            max_notification_id1, 1, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 1)
         self.assertEqual(notifications[0].originator_id, originator_id1)
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
 
         # Select a limited number of notifications from later position.
-        notifications = recorder.select_notifications(max_notification_id2 + 1, 1)
+        notifications = recorder.select_notifications(
+            max_notification_id2, 1, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 1)
         self.assertEqual(notifications[0].originator_id, originator_id2)
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
 
+        # Select a limited number of notifications from later position (inclusive of start).
+        notifications = recorder.select_notifications(
+            max_notification_id2, 1, inclusive_of_start=True
+        )
+        self.assertEqual(len(notifications), 1)
+        self.assertEqual(notifications[0].originator_id, originator_id1)
+        self.assertEqual(notifications[0].originator_version, 1)
+
         # Select notifications between two positions
         notifications = recorder.select_notifications(
-            start=max_notification_id1 + 1, limit=10, stop=max_notification_id2
+            start=max_notification_id1,
+            limit=10,
+            stop=max_notification_id2,
+            inclusive_of_start=False,
         )
         self.assertEqual(len(notifications), 2)
         self.assertEqual(notifications[0].originator_id, originator_id1)
@@ -480,6 +535,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         # Cover exception handling when stream name is not a UUID.
         max_notification_id4 = recorder.max_notification_id()
+        assert isinstance(max_notification_id4, int)
 
         cast(EventStoreDBApplicationRecorder, recorder).client.append_to_stream(
             stream_name=f"not-a-uuid-{uuid4()}",
@@ -488,7 +544,10 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         )
         with self.assertRaises(ValueError) as cm1:
             recorder.select_notifications(
-                start=max_notification_id4 + 1, limit=10, stop=max_notification_id2
+                start=max_notification_id4,
+                limit=10,
+                stop=max_notification_id2,
+                inclusive_of_start=False,
             )
         self.assertIn("badly formed hexadecimal UUID string", str(cm1.exception))
 
@@ -503,6 +562,77 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
     def test_concurrent_no_conflicts(self) -> None:
         super().test_concurrent_no_conflicts()
+
+    def test_insert_subscribe(self) -> None:
+        super().optional_test_insert_subscribe()
+
+    def test_subscribe_concurrent_reading_and_writing(self) -> None:
+        recorder = self.create_recorder()
+
+        num_batches = 1000
+        batch_size = 1
+        num_events = num_batches * batch_size
+
+        def read(last_notification_id: int | None) -> None:
+            subscription = recorder.subscribe(last_notification_id)
+            start = datetime.now()
+            with subscription:
+                for i, _ in enumerate(subscription):
+                    # print("Read", i+1, "notifications")
+                    # last_notification_id = notification.id
+                    if i + 1 == num_events:
+                        break
+            duration = datetime.now() - start
+            print(
+                "Finished reading",
+                num_events,
+                "events in",
+                duration.total_seconds(),
+                "seconds",
+            )
+
+        def write() -> None:
+            start = datetime.now()
+            for _ in range(num_batches):
+                originator_id = uuid4()
+                events = []
+                for i in range(batch_size):
+                    stored_event = StoredEvent(
+                        originator_id=originator_id,
+                        originator_version=i,
+                        topic="topic1",
+                        state=b"state1",
+                    )
+                    events.append(stored_event)
+                recorder.insert_events(events)
+                # print("Wrote", i + 1, "notifications")
+            duration = datetime.now() - start
+            print(
+                "Finished writing",
+                num_events,
+                "events in",
+                duration.total_seconds(),
+                "seconds",
+            )
+
+        thread_pool = ThreadPoolExecutor(max_workers=2)
+
+        print("Concurrent...")
+        # Get the max notification ID (for the subscription).
+        last_notification_id = recorder.max_notification_id()
+        write_job = thread_pool.submit(write)
+        read_job = thread_pool.submit(read, last_notification_id)
+        write_job.result()
+        read_job.result()
+
+        print("Sequential...")
+        last_notification_id = recorder.max_notification_id()
+        write_job = thread_pool.submit(write)
+        write_job.result()
+        read_job = thread_pool.submit(read, last_notification_id)
+        read_job.result()
+
+        thread_pool.shutdown(wait=True)
 
 
 del AggregateRecorderTestCase

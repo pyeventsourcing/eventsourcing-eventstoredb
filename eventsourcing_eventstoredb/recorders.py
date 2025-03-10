@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import json
 import re
 import sys
 from typing import Any, List, Optional, Sequence, Union
 from uuid import UUID
 
-from esdbclient import DEFAULT_EXCLUDE_FILTER, EventStoreDBClient, NewEvent, StreamState
+import esdbclient.exceptions
+from esdbclient import (
+    DEFAULT_EXCLUDE_FILTER,
+    EventStoreDBClient,
+    NewEvent,
+    RecordedEvent,
+    StreamState,
+)
 from esdbclient.exceptions import NotFound, WrongCurrentVersion
 from eventsourcing.persistence import (
     AggregateRecorder,
@@ -15,6 +24,7 @@ from eventsourcing.persistence import (
     PersistenceError,
     ProgrammingError,
     StoredEvent,
+    Subscription,
 )
 
 
@@ -219,50 +229,34 @@ class EventStoreDBApplicationRecorder(
 
     def select_notifications(
         self,
-        start: int,
+        start: int | None,
         limit: int,
         stop: Optional[int] = None,
         topics: Sequence[str] = (),
+        inclusive_of_start: bool = True,
     ) -> List[Notification]:
-        # Assume reading from +1 the last commit position, so
-        # subtract 1, and then drop the first event.
-        if start > 0:
-            start_commit_position = start - 1
+        if not inclusive_of_start:
             limit += 1
-        else:
-            start_commit_position = None
-
         recorded_events = self.client.read_all(
-            commit_position=start_commit_position,
+            commit_position=start,
             filter_exclude=DEFAULT_EXCLUDE_FILTER + (".*Snapshot",),
             filter_include=[re.escape(t) for t in topics] or [],
             limit=limit,
         )
 
         notifications = []
-        drop_first = start is not None
         for recorded_event in recorded_events:
-            # Drop the first, but only if 'start' is its 'commit position'.
-            if drop_first:
-                drop_first = False
-                if recorded_event.commit_position == start_commit_position:
-                    continue
-
-            # Catch a failure to reconstruct UUID, so we can see what didn't work.
-            try:
-                originator_id = UUID(recorded_event.stream_name)
-            except ValueError as e:
-                raise ValueError(f"{e}: {recorded_event.stream_name}") from e
+            # Maybe drop first event.
+            if (
+                not inclusive_of_start
+                and isinstance(start, int)
+                and recorded_event.commit_position == start
+            ):
+                continue
 
             # Construct a Notification object from the RecordedEvent object.
             assert isinstance(recorded_event.commit_position, int)
-            notification = Notification(
-                id=recorded_event.commit_position,
-                originator_id=originator_id,
-                originator_version=recorded_event.stream_position,
-                topic=recorded_event.type,
-                state=recorded_event.data,
-            )
+            notification = self._construct_notification(recorded_event)
             notifications.append(notification)
 
             # Check we aren't going over the limit, in case we didn't drop the first.
@@ -276,7 +270,57 @@ class EventStoreDBApplicationRecorder(
 
         return notifications
 
-    def max_notification_id(self) -> int:
-        return self.client.get_commit_position(
-            filter_exclude=DEFAULT_EXCLUDE_FILTER + (".*Snapshot",),
+    def _construct_notification(self, recorded_event: RecordedEvent) -> Notification:
+        # Catch a failure to reconstruct UUID, so we can see what didn't work.
+        try:
+            originator_id = UUID(recorded_event.stream_name)
+        except ValueError as e:
+            raise ValueError(f"{e}: {recorded_event.stream_name}") from e
+
+        assert recorded_event.commit_position is not None
+        notification = Notification(
+            id=recorded_event.commit_position,
+            originator_id=originator_id,
+            originator_version=recorded_event.stream_position,
+            topic=recorded_event.type,
+            state=recorded_event.data,
         )
+        return notification
+
+    def max_notification_id(self) -> int | None:
+        return self.client.get_commit_position(
+            filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
+        )
+
+    def subscribe(self, gt: int | None = None) -> Subscription[ApplicationRecorder]:
+        return EventStoreDBSubscription(self, gt)
+
+
+class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
+    def __init__(
+        self, recorder: EventStoreDBApplicationRecorder, gt: int | None = None
+    ):
+        super(EventStoreDBSubscription, self).__init__(recorder=recorder, gt=gt)
+        self._esdb_subscription = self._recorder.client.subscribe_to_all(
+            commit_position=self._last_notification_id
+        )
+
+    def __next__(self) -> Notification:
+        while not self._has_been_stopped:
+            try:
+                recorded_event = next(self._esdb_subscription)
+            except esdbclient.exceptions.ConsumerTooSlow:
+                # Sometimes the database drops the connection just after starting.
+                self._esdb_subscription = self._recorder.client.subscribe_to_all(
+                    commit_position=self._last_notification_id
+                )
+            else:
+                notification = self._recorder._construct_notification(recorded_event)
+                self._last_notification_id = notification.id
+                return notification
+
+        raise StopIteration
+
+    def stop(self) -> None:
+        super().stop()
+        self._esdb_subscription.stop()

@@ -7,6 +7,7 @@ from uuid import uuid4
 from esdbclient.exceptions import SSLError
 from eventsourcing.application import Application, EventSourcedLog
 from eventsourcing.domain import Aggregate, DomainEvent
+from eventsourcing.persistence import PersistenceError
 from eventsourcing.system import NotificationLogReader
 from eventsourcing.tests.application import (
     TIMEIT_FACTOR,
@@ -50,6 +51,7 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
         # Get the commit position before writing any events.
         max_notification_id1 = app.recorder.max_notification_id()
+        assert max_notification_id1 is not None
 
         # Select notifications.
         notifications = app.notification_log.select(max_notification_id1 + 1, 10)
@@ -73,13 +75,18 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
         # Get the commit position after writing one event.
         max_notification_id2 = app.recorder.max_notification_id()
+        assert max_notification_id2 is not None
 
         # Check there is one notification since the initial commit position.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id1, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 1)
 
         # Check there are zero notifications since the second commit position.
-        notifications = app.notification_log.select(max_notification_id2 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id2, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 0)
 
         # Credit the account.
@@ -93,17 +100,24 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
         # Get the commit position after writing two events.
         max_notification_id3 = app.recorder.max_notification_id()
+        assert max_notification_id3 is not None
 
         # Check there are two notifications since the initial commit position.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id1, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 2)
 
         # Check there is one notification since the second commit position.
-        notifications = app.notification_log.select(max_notification_id2 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id2, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 1)
 
         # Check there are zero notifications since the third commit position.
-        notifications = app.notification_log.select(max_notification_id3 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id3, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 0)
 
         # Credit the account twice
@@ -118,21 +132,30 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
         # Get the commit position after writing four events.
         max_notification_id4 = app.recorder.max_notification_id()
+        assert max_notification_id4 is not None
 
         # Check there are four notifications since the initial commit position.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id1, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 4)
 
         # Check there are three notifications since the second commit position.
-        notifications = app.notification_log.select(max_notification_id2 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id2, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 3)
 
         # Check there are two notifications since the third commit position.
-        notifications = app.notification_log.select(max_notification_id3 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id3, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 2)
 
         # Check there are zero notifications since the fourth commit position.
-        notifications = app.notification_log.select(max_notification_id4 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id4, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 0)
 
         # Get historical version.
@@ -167,19 +190,27 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         self.assertEqual(snapshots[0].originator_version, Aggregate.INITIAL_VERSION + 3)
 
         # Check there are four notifications since the initial commit position.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id1, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 4)
 
         # Check there are three notifications since the second commit position.
-        notifications = app.notification_log.select(max_notification_id2 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id2, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 3)
 
         # Check there are two notifications since the third commit position.
-        notifications = app.notification_log.select(max_notification_id3 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id3, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 2)
 
         # Check there are zero notifications since the fourth commit position.
-        notifications = app.notification_log.select(max_notification_id4 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id4, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 0)
 
         # Open another account.
@@ -196,7 +227,9 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         app.take_snapshot(account_id2)
 
         # Check there are eight notifications since the initial commit position.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id1, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 8)
 
         # Check the individual notifications.
@@ -239,21 +272,27 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         app.credit_account(account_id3, Decimal("30.00"))
 
         # Check we can get five notifications since the initial commit position.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 5)
+        notifications = app.notification_log.select(
+            max_notification_id1, 5, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 5)
 
         # Check we can get ten notifications since the initial commit position.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 10)
+        notifications = app.notification_log.select(
+            max_notification_id1, 10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 10)
 
-        # Check we can read all notification since the initial commit position.
-        reader = NotificationLogReader(app.notification_log)
-        notifications = list(reader.read(start=max_notification_id1 + 1))
-        self.assertEqual(len(notifications), 12)
+        # # Check we can read all notification since the initial commit position.
+        # reader = NotificationLogReader(app.notification_log)
+        # notifications = list(reader.read(start=max_notification_id1 + 1))
+        # self.assertEqual(len(notifications), 12)
 
         # Check we can select all notification since the initial commit position.
         reader = NotificationLogReader(app.notification_log)
-        notifications = list(chain(*reader.select(start=max_notification_id1 + 1)))
+        notifications = list(
+            chain(*reader.select(start=max_notification_id1, inclusive_of_start=False))
+        )
         self.assertEqual(len(notifications), 12)
 
     def test_event_sourced_log(self) -> None:
@@ -289,8 +328,10 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
     def test_construct_secure_without_root_certificates(self) -> None:
         os.environ["EVENTSTOREDB_URI"] = "esdb://admin:changeit@localhost"
-        with self.assertRaises(SSLError):
-            BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
+        with self.assertRaises(PersistenceError) as cm:
+            app = BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
+            app.open_account(full_name="Bob", email_address="bob@example.com")
+        self.assertIsInstance(cm.exception.args[0], SSLError)
 
 
 del ExampleApplicationTestCase

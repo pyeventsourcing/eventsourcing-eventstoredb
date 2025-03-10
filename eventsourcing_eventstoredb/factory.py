@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
+from typing import Type
+
 from esdbclient import EventStoreDBClient
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
     InfrastructureFactory,
     ProcessRecorder,
+    TrackingRecorder,
 )
 from eventsourcing.utils import Environment
 
@@ -14,7 +19,7 @@ from eventsourcing_eventstoredb.recorders import (
 )
 
 
-class Factory(InfrastructureFactory):
+class Factory(InfrastructureFactory[TrackingRecorder]):
     """
     Infrastructure factory for EventStoreDB infrastructure.
     """
@@ -45,6 +50,11 @@ class Factory(InfrastructureFactory):
 
     def application_recorder(self) -> ApplicationRecorder:
         return EventStoreDBApplicationRecorder(self.client)
+
+    def tracking_recorder(
+        self, tracking_recorder_class: Type[TrackingRecorder] | None = None
+    ) -> TrackingRecorder:
+        raise NotImplementedError()
 
     def process_recorder(self) -> ProcessRecorder:
         raise NotImplementedError()
