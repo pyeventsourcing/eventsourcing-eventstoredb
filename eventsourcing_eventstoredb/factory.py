@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Type
 
-from esdbclient import EventStoreDBClient
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -12,6 +11,7 @@ from eventsourcing.persistence import (
     TrackingRecorder,
 )
 from eventsourcing.utils import Environment
+from kurrentdbclient import KurrentDBClient
 
 from eventsourcing_eventstoredb.recorders import (
     EventStoreDBAggregateRecorder,
@@ -37,7 +37,7 @@ class Factory(InfrastructureFactory[TrackingRecorder]):
                 f"{', '.join(self.env.create_keys(self.EVENTSTOREDB_URI))!r}"
             )
         root_certificates = self.env.get(self.EVENTSTOREDB_ROOT_CERTIFICATES)
-        self.client = EventStoreDBClient(
+        self.client = KurrentDBClient(
             uri=eventstoredb_uri,
             root_certificates=root_certificates,
         )

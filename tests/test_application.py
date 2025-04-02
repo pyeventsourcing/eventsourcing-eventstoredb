@@ -4,10 +4,11 @@ from decimal import Decimal
 from itertools import chain
 from uuid import uuid4
 
-from esdbclient.exceptions import SSLError
+import kurrentdbclient.exceptions
 from eventsourcing.application import Application, EventSourcedLog
 from eventsourcing.domain import Aggregate, DomainEvent
 from eventsourcing.persistence import PersistenceError
+from eventsourcing.projection import ApplicationSubscription
 from eventsourcing.system import NotificationLogReader
 from eventsourcing.tests.application import (
     TIMEIT_FACTOR,
@@ -295,6 +296,19 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         )
         self.assertEqual(len(notifications), 12)
 
+        # Check we can subscribe to all notification since the initial commit position.
+        # - and check the subscription filters out snapshot events...
+        subscription = ApplicationSubscription(app, gt=max_notification_id1)
+        max_notification_id5 = app.recorder.max_notification_id()
+
+        domain_events = []
+        with subscription:
+            for domain_event, tracking in subscription:
+                domain_events.append(domain_event)
+                if tracking.notification_id == max_notification_id5:
+                    break
+            self.assertEqual(len(notifications), 12)
+
     def test_event_sourced_log(self) -> None:
         class LoggedEvent(DomainEvent):
             name: str
@@ -331,7 +345,7 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         with self.assertRaises(PersistenceError) as cm:
             app = BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
             app.open_account(full_name="Bob", email_address="bob@example.com")
-        self.assertIsInstance(cm.exception.args[0], SSLError)
+        self.assertIsInstance(cm.exception.args[0], kurrentdbclient.exceptions.SSLError)
 
 
 del ExampleApplicationTestCase

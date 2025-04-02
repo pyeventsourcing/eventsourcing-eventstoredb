@@ -6,8 +6,7 @@ from datetime import datetime
 from typing import cast
 from uuid import uuid4
 
-from esdbclient import EventStoreDBClient, NewEvent, StreamState
-from esdbclient.exceptions import UnknownError
+import kurrentdbclient.exceptions
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -19,6 +18,7 @@ from eventsourcing.tests.persistence import (
     AggregateRecorderTestCase,
     ApplicationRecorderTestCase,
 )
+from kurrentdbclient import KurrentDBClient, NewEvent, StreamState
 
 from eventsourcing_eventstoredb.recorders import (
     EventStoreDBAggregateRecorder,
@@ -31,7 +31,7 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
     INITIAL_VERSION = 0
 
     def setUp(self) -> None:
-        self.client = EventStoreDBClient(INSECURE_CONNECTION_STRING)
+        self.client = KurrentDBClient(INSECURE_CONNECTION_STRING)
 
     def create_recorder(self) -> AggregateRecorder:
         return EventStoreDBAggregateRecorder(client=self.client)
@@ -281,7 +281,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
     def setUp(self) -> None:
         # self.original_initial_version = Aggregate.INITIAL_VERSION
         # Aggregate.INITIAL_VERSION = 0
-        self.client = EventStoreDBClient(INSECURE_CONNECTION_STRING)
+        self.client = KurrentDBClient(INSECURE_CONNECTION_STRING)
 
     def tearDown(self) -> None:
         del self.client
@@ -408,7 +408,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(stored_events2[0].originator_version, self.INITIAL_VERSION)
 
         # InvalidPosition error when selecting from max_notification_id1 + 1.
-        with self.assertRaises(UnknownError) as cm:
+        with self.assertRaises(kurrentdbclient.exceptions.UnknownError) as cm:
             recorder.select_notifications(
                 max_notification_id1 + 1, 10, inclusive_of_start=False
             )

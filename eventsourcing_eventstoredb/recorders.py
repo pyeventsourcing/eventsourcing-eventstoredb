@@ -7,15 +7,7 @@ import sys
 from typing import Any, List, Optional, Sequence, Union
 from uuid import UUID
 
-import esdbclient.exceptions
-from esdbclient import (
-    DEFAULT_EXCLUDE_FILTER,
-    EventStoreDBClient,
-    NewEvent,
-    RecordedEvent,
-    StreamState,
-)
-from esdbclient.exceptions import NotFound, WrongCurrentVersion
+import kurrentdbclient.exceptions
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -26,6 +18,13 @@ from eventsourcing.persistence import (
     StoredEvent,
     Subscription,
 )
+from kurrentdbclient import (
+    DEFAULT_EXCLUDE_FILTER,
+    KurrentDBClient,
+    NewEvent,
+    RecordedEvent,
+    StreamState,
+)
 
 
 class EventStoreDBAggregateRecorder(AggregateRecorder):
@@ -33,7 +32,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
 
     def __init__(
         self,
-        client: EventStoreDBClient,
+        client: KurrentDBClient,
         for_snapshotting: bool = False,
         *args: Any,
         **kwargs: Any,
@@ -122,7 +121,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                 current_version=current_version,
                 events=new_events,
             )
-        except WrongCurrentVersion as e:
+        except kurrentdbclient.exceptions.WrongCurrentVersion as e:
             raise IntegrityError(e) from e
         except Exception as e:
             raise PersistenceError(e) from e
@@ -213,7 +212,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                     state=ev.data,
                 )
                 stored_events.append(se)
-        except NotFound:
+        except kurrentdbclient.exceptions.NotFound:
             return []
 
         return stored_events
@@ -302,17 +301,19 @@ class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
     ):
         super(EventStoreDBSubscription, self).__init__(recorder=recorder, gt=gt)
         self._esdb_subscription = self._recorder.client.subscribe_to_all(
-            commit_position=self._last_notification_id
+            commit_position=self._last_notification_id,
+            filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
         )
 
     def __next__(self) -> Notification:
         while not self._has_been_stopped:
             try:
                 recorded_event = next(self._esdb_subscription)
-            except esdbclient.exceptions.ConsumerTooSlow:
+            except kurrentdbclient.exceptions.ConsumerTooSlow:  # pragma: no cover
                 # Sometimes the database drops the connection just after starting.
                 self._esdb_subscription = self._recorder.client.subscribe_to_all(
-                    commit_position=self._last_notification_id
+                    commit_position=self._last_notification_id,
+                    filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
                 )
             else:
                 notification = self._recorder._construct_notification(recorded_event)

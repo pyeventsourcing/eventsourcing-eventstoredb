@@ -26,11 +26,11 @@ repository = "https://github.com/pyeventsourcing/eventsourcing-eventstoredb"
 include = ["eventsourcing_eventstoredb/py.typed"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-eventsourcing = { version = "9.4.0a1" }
+python = ">=3.8,<4.0,!=3.9.0,!=3.9.1"
+eventsourcing = { version = "9.4.0a3" }
 #eventsourcing = { path = "../eventsourcing/", develop = true }
 #esdbclient = { path = "../esdbclient/", develop = true }
-esdbclient = { version = "~1.1" }
+kurrentdbclient = { version = "1.0b2" }
 
 
 [tool.poetry.dev-dependencies]
