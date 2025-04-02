@@ -23,37 +23,56 @@ expects the `originator_version` of the first event in an aggregate sequence
 to be `0`, so you must set `INITIAL_VERSION` on your aggregate classes to `0`.
 
 ```python
+from __future__ import annotations
+
+from uuid import uuid5, NAMESPACE_URL
+from typing import List, TypedDict, Tuple
+
 from eventsourcing.application import Application
 from eventsourcing.domain import Aggregate, event
 
 
 class TrainingSchool(Application):
-    def register(self, name):
+    def register(self, name: str) -> int:
         dog = Dog(name)
-        self.save(dog)
-        return dog.id
+        recordings = self.save(dog)
+        return recordings[-1].notification.id
 
-    def add_trick(self, dog_id, trick):
-        dog = self.repository.get(dog_id)
+    def add_trick(self, name: str, trick: str) -> int:
+        dog = self._get_dog(name)
         dog.add_trick(trick)
-        self.save(dog)
+        recordings = self.save(dog)
+        return recordings[-1].notification.id
 
-    def get_dog(self, dog_id):
-        dog = self.repository.get(dog_id)
-        return {'name': dog.name, 'tricks': list(dog.tricks)}
+    def get_dog_details(self, name: str) -> DogDetails:
+        dog = self._get_dog(name)
+        return {'name': dog.name, 'tricks': tuple(dog.tricks)}
+
+    def _get_dog(self, name: str) -> Dog:
+        return self.repository.get(Dog.create_id(name))
+
 
 
 class Dog(Aggregate):
     INITIAL_VERSION = 0  # for EventStoreDB
 
+    @staticmethod
+    def create_id(name: str):
+        return uuid5(NAMESPACE_URL, f"/dogs/{name}")
+
     @event('Registered')
     def __init__(self, name):
         self.name = name
-        self.tricks = []
+        self.tricks: List[str] = []
 
     @event('TrickAdded')
     def add_trick(self, trick):
         self.tricks.append(trick)
+
+
+class DogDetails(TypedDict):
+    name: str
+    tricks: Tuple[str, ...]
 ```
 
 Configure the application to use EventStoreDB by setting the application environment
@@ -64,7 +83,7 @@ the application object, or by setting `env` on the application class.
 ```python
 import os
 
-os.environ['PERSISTENCE_MODULE'] = 'eventsourcing_eventstoredb'
+os.environ['TRAININGSCHOOL_PERSISTENCE_MODULE'] = 'eventsourcing_eventstoredb'
 ```
 
 Also set environment variable `EVENTSTOREDB_URI` and to an EventStoreDB
@@ -97,31 +116,200 @@ in the client when connecting to a "secure" EventStoreDB server.
 Construct the application.
 
 ```python
-school = TrainingSchool()
+training_school = TrainingSchool()
 ```
 
 Call application methods from tests and user interfaces.
 
 ```python
-dog_id = school.register('Fido')
-school.add_trick(dog_id, 'roll over')
-school.add_trick(dog_id, 'play dead')
-dog_details = school.get_dog(dog_id)
+training_school.register('Fido')
+training_school.add_trick('Fido', 'roll over')
+training_school.add_trick('Fido', 'play dead')
+dog_details = training_school.get_dog_details('Fido')
 assert dog_details['name'] == 'Fido'
-assert dog_details['tricks'] == ['roll over', 'play dead']
+assert dog_details['tricks'] == ('roll over', 'play dead')
 ```
 
 To see the events have been saved, we can reconstruct the application
 and get Fido's details again.
 
 ```python
-school = TrainingSchool()
+training_school = TrainingSchool()
 
-dog_details = school.get_dog(dog_id)
+dog_details = training_school.get_dog_details('Fido')
 
 assert dog_details['name'] == 'Fido'
-assert dog_details['tricks'] == ['roll over', 'play dead']
+assert dog_details['tricks'] == ('roll over', 'play dead')
 ```
+
+## Projections
+
+To project the state of an event-sourced application "write model" into a
+materialised view "read model", first define an interface for the materialised view
+using the `TrackingRecorder` class from the `eventsourcing` library.
+
+The example below defines methods to counts dogs and tricks for the `TrainingSchool`
+application
+
+```python
+from abc import abstractmethod
+from eventsourcing.persistence import Tracking, TrackingRecorder
+
+class CountRecorderInterface(TrackingRecorder):
+    @abstractmethod
+    def incr_dog_counter(self, tracking: Tracking) -> None:
+        pass
+
+    @abstractmethod
+    def incr_trick_counter(self, tracking: Tracking) -> None:
+        pass
+
+    @abstractmethod
+    def get_dog_counter(self) -> int:
+        pass
+
+    @abstractmethod
+    def get_trick_counter(self) -> int:
+        pass
+```
+
+The `CountRecorderInterface` can implemented to use a concrete database.
+
+The example below counts dogs and tricks in memory, using "plain old Python objects".
+
+```python
+from eventsourcing.popo import POPOTrackingRecorder
+
+class POPOCountRecorder(POPOTrackingRecorder, CountRecorderInterface):
+    def __init__(self):
+        super().__init__()
+        self._dog_counter = 0
+        self._trick_counter = 0
+
+    def incr_dog_counter(self, tracking: Tracking) -> None:
+        with self._database_lock:
+            self._insert_tracking(tracking)
+            self._dog_counter += 1
+
+    def incr_trick_counter(self, tracking: Tracking) -> None:
+        with self._database_lock:
+            self._insert_tracking(tracking)
+            self._trick_counter += 1
+
+    def get_dog_counter(self) -> int:
+        return self._dog_counter
+
+    def get_trick_counter(self) -> int:
+        return self._trick_counter
+```
+
+After defining the materialised view interface, define how events will be processed
+using the `Projection` class from the `eventsourcing` library.
+
+The example below processes `Dog` events: `Dog.Registered` events by calling `incr_dog_counter()`;
+`Dog.TrickAdded` events by calling `incr_trick_counter()`. Setting the event topics
+on the `CountProjection` class is not necessary, but speeds event processing by
+filtering events in the database.
+
+```python
+from eventsourcing.domain import Aggregate, DomainEventProtocol
+from eventsourcing.dispatch import singledispatchmethod
+from eventsourcing.projection import Projection
+from eventsourcing.utils import get_topic
+
+
+class CountProjection(Projection[CountRecorderInterface]):
+    topics = (
+        get_topic(Dog.Registered),
+        get_topic(Dog.TrickAdded),
+    )
+
+    def __init__(
+        self,
+        tracking_recorder: CountRecorderInterface,
+    ):
+        assert isinstance(tracking_recorder, CountRecorderInterface), type(
+            tracking_recorder
+        )
+        super().__init__(tracking_recorder)
+
+    @singledispatchmethod
+    def process_event(self, event: DomainEventProtocol, tracking: Tracking) -> None:
+        print("Process event:", event)
+
+    @process_event.register
+    def aggregate_created(self, event: Dog.Registered, tracking: Tracking) -> None:
+        self.tracking_recorder.incr_dog_counter(tracking)
+
+    @process_event.register
+    def aggregate_event(self, event: Dog.TrickAdded, tracking: Tracking) -> None:
+        self.tracking_recorder.incr_trick_counter(tracking)
+```
+
+Run the projection with the `ProjectionRunner` class from the `eventsourcing` library,
+by calling it with an application class, a projection class, a concrete tracking
+recorder class.
+
+```python
+import os
+from eventsourcing.projection import ProjectionRunner
+
+with ProjectionRunner(
+    application_class=TrainingSchool,
+    projection_class=CountProjection,
+    tracking_recorder_class=POPOCountRecorder,
+) as runner:
+
+    # Get "read model" instance.
+    materialised_view = runner.projection.tracking_recorder
+
+    # Wait for the existing events to be processed.
+    materialised_view.wait(
+        training_school.name,
+        training_school.recorder.max_notification_id(),
+    )
+
+    # Query the read model.
+    dog_count = materialised_view.get_dog_counter()
+    trick_count = materialised_view.get_trick_counter()
+
+    # Write another event.
+    notification_id = training_school.add_trick('Fido', 'sit and stay')
+
+    # Wait for the new event to be processed.
+    materialised_view.wait(
+        training_school.name,
+        notification_id,
+    )
+
+    # Expect one trick more, same number of dogs.
+    assert dog_count == materialised_view.get_dog_counter()
+    assert trick_count + 1 == materialised_view.get_trick_counter()
+
+    # Write another event.
+    notification_id = training_school.add_trick('Fido', 'jump hoop')
+
+    # Wait for the new event to be processed.
+    materialised_view.wait(
+        training_school.name,
+        notification_id,
+    )
+
+    # Expect two tricks more, same number of dogs.
+    assert dog_count == materialised_view.get_dog_counter()
+    assert trick_count + 2 == materialised_view.get_trick_counter()
+```
+
+The example above shows that when tricks are added to the upstream event-sourced
+application "write model", the trick counter is incremented in the downstream
+materialised view "read model".
+
+To implement a materialised view that uses PostgreSQL, please use the
+`PostgresTrackingRecorder` class from the `eventsourcing` library (see
+the library docs for more information about projecting the state of
+an event-sourced application into PostgreSQL).
+
+## More information
 
 For more information, please refer to the Python
 [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library, the

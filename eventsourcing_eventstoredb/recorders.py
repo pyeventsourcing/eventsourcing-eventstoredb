@@ -291,18 +291,26 @@ class EventStoreDBApplicationRecorder(
             filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
         )
 
-    def subscribe(self, gt: int | None = None) -> Subscription[ApplicationRecorder]:
-        return EventStoreDBSubscription(self, gt)
+    def subscribe(
+        self, gt: int | None = None, topics: Sequence[str] = ()
+    ) -> Subscription[ApplicationRecorder]:
+        return EventStoreDBSubscription(recorder=self, gt=gt, topics=topics)
 
 
 class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
     def __init__(
-        self, recorder: EventStoreDBApplicationRecorder, gt: int | None = None
+        self,
+        recorder: EventStoreDBApplicationRecorder,
+        gt: int | None = None,
+        topics: Sequence[str] = (),
     ):
-        super(EventStoreDBSubscription, self).__init__(recorder=recorder, gt=gt)
+        super(EventStoreDBSubscription, self).__init__(
+            recorder=recorder, gt=gt, topics=topics
+        )
         self._esdb_subscription = self._recorder.client.subscribe_to_all(
             commit_position=self._last_notification_id,
             filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
+            filter_include=self._topics,  # has priority
         )
 
     def __next__(self) -> Notification:
@@ -314,6 +322,7 @@ class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
                 self._esdb_subscription = self._recorder.client.subscribe_to_all(
                     commit_position=self._last_notification_id,
                     filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
+                    filter_include=self._topics,  # has priority
                 )
             else:
                 notification = self._recorder._construct_notification(recorded_event)

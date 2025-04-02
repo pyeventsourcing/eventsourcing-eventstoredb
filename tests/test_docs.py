@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import ssl
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 from unittest import TestCase
@@ -168,11 +169,16 @@ class TestDocs(TestCase):
         #         self.fail(decoded_out + decoded_err)
 
     def substitute_lines(self, lines: List[str]) -> None:
-        pass
+        fido_suffix = str(uuid.uuid4())
+        for i in range(len(lines)):
+            line = lines[i]
+            line = line.replace("'Fido'", "'Fido-" + fido_suffix + "'")
+            lines[i] = line
 
 
 class TestDocsSecure(TestDocs):
     def substitute_lines(self, lines: List[str]) -> None:
+        super().substitute_lines(lines)
         for i in range(len(lines)):
             line = lines[i]
             if line.startswith("os.environ['EVENTSTOREDB_URI']"):

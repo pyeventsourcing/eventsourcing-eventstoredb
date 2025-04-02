@@ -47,19 +47,19 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
             originator_id=originator_id1,
             originator_version=self.INITIAL_VERSION,
             topic="topic1",
-            state=b"state1",
+            state=b'{"state": "state1"}',
         )
         stored_event2 = StoredEvent(
             originator_id=originator_id1,
             originator_version=self.INITIAL_VERSION + 1,
             topic="topic2",
-            state=b"state2",
+            state=b'{"state": "state2"}',
         )
         stored_event3 = StoredEvent(
             originator_id=originator_id1,
             originator_version=self.INITIAL_VERSION + 2,
             topic="topic3",
-            state=b"state3",
+            state=b'{"state": "state3"}',
         )
 
         # Insert three events.
@@ -263,13 +263,13 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
                 originator_id=uuid4(),
                 originator_version=self.INITIAL_VERSION,
                 topic="topic4",
-                state=b"state4",
+                state=b'{"state": "state4"}',
             )
             stored_event5 = StoredEvent(
                 originator_id=uuid4(),
                 originator_version=self.INITIAL_VERSION,
                 topic="topic5",
-                state=b"state5",
+                state=b'{"state": "state5"}',
             )
             recorder.insert_events([stored_event4, stored_event5])
 
@@ -345,19 +345,19 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
             originator_id=originator_id1,
             originator_version=self.INITIAL_VERSION,
             topic="topic1",
-            state=b"state1",
+            state=b'{"state": "state1"}',
         )
         stored_event2 = StoredEvent(
             originator_id=originator_id1,
             originator_version=self.INITIAL_VERSION + 1,
             topic="topic2",
-            state=b"state2",
+            state=b'{"state": "state2"}',
         )
         stored_event3 = StoredEvent(
             originator_id=originator_id2,
             originator_version=self.INITIAL_VERSION,
             topic="topic3",
-            state=b"state3",
+            state=b'{"state": "state3"}',
         )
 
         # Insert two events.
@@ -421,17 +421,17 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(notifications[0].originator_id, originator_id1)
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
         self.assertEqual(notifications[0].topic, "topic1")
-        self.assertEqual(notifications[0].state, b"state1")
+        self.assertEqual(notifications[0].state, b'{"state": "state1"}')
         self.assertEqual(notifications[1].originator_id, originator_id1)
         self.assertEqual(notifications[1].originator_version, self.INITIAL_VERSION + 1)
         self.assertEqual(notifications[1].topic, "topic2")
-        self.assertEqual(notifications[1].state, b"state2")
+        self.assertEqual(notifications[1].state, b'{"state": "state2"}')
         self.assertEqual(notifications[1].id, max_notification_id2)
 
         self.assertEqual(notifications[2].originator_id, originator_id2)
         self.assertEqual(notifications[2].originator_version, self.INITIAL_VERSION)
         self.assertEqual(notifications[2].topic, "topic3")
-        self.assertEqual(notifications[2].state, b"state3")
+        self.assertEqual(notifications[2].state, b'{"state": "state3"}')
         self.assertEqual(notifications[2].id, max_notification_id3)
 
         # Select notification by topic (all topics).
@@ -601,7 +601,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
                         originator_id=originator_id,
                         originator_version=i,
                         topic="topic1",
-                        state=b"state1",
+                        state=b'{"state": "state1"}',
                     )
                     events.append(stored_event)
                 recorder.insert_events(events)
