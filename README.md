@@ -206,13 +206,15 @@ class POPOCountRecorder(POPOTrackingRecorder, CountRecorderInterface):
 After defining the materialised view interface, define how events will be processed
 using the `Projection` class from the `eventsourcing` library.
 
-The example below processes `Dog` events: `Dog.Registered` events by calling `incr_dog_counter()`;
-`Dog.TrickAdded` events by calling `incr_trick_counter()`. Setting the event topics
-on the `CountProjection` class is not necessary, but speeds event processing by
-filtering events in the database.
+The example below processes `Dog` events. The `Dog.Registered` events are processed
+by calling `incr_dog_counter()`. The `Dog.TrickAdded` events are processed by calling
+`incr_trick_counter()`.
+
+Setting the event topics on the `CountProjection` class is not necessary, but speeds
+event processing by filtering events in the application's database.
 
 ```python
-from eventsourcing.domain import Aggregate, DomainEventProtocol
+from eventsourcing.domain import DomainEventProtocol
 from eventsourcing.dispatch import singledispatchmethod
 from eventsourcing.projection import Projection
 from eventsourcing.utils import get_topic
