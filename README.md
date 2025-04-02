@@ -237,7 +237,6 @@ class CountProjection(Projection[CountRecorderInterface]):
 
     @singledispatchmethod
     def process_event(self, event: DomainEventProtocol, tracking: Tracking) -> None:
-        print("Process event:", event)
 
     @process_event.register
     def aggregate_created(self, event: Dog.Registered, tracking: Tracking) -> None:
@@ -268,7 +267,8 @@ with ProjectionRunner(
     tracking_recorder_class=POPOCountRecorder,
 ) as runner:
 
-    # Get "read model" instance.
+    # Get "read model" instance from runner, because
+    # state of materialised view is stored in memory.
     materialised_view = runner.projection.tracking_recorder
 
     # Wait for the existing events to be processed.
@@ -277,14 +277,14 @@ with ProjectionRunner(
         training_school.recorder.max_notification_id(),
     )
 
-    # Query the read model.
+    # Query the "read model".
     dog_count = materialised_view.get_dog_counter()
     trick_count = materialised_view.get_trick_counter()
 
-    # Write another event.
+    # Record another event in "write model".
     notification_id = training_school.add_trick('Fido', 'sit and stay')
 
-    # Wait for the new event to be processed.
+    # Wait for the new event to be processed by the projection.
     materialised_view.wait(
         training_school.name,
         notification_id,
