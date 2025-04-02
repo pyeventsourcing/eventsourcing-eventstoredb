@@ -173,7 +173,7 @@ class CountRecorderInterface(TrackingRecorder):
         pass
 ```
 
-The `CountRecorderInterface` can implemented to use a concrete database.
+The `CountRecorderInterface` can be implemented to use a concrete database.
 
 The example below counts dogs and tricks in memory, using "plain old Python objects".
 
