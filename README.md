@@ -249,7 +249,7 @@ class CountProjection(Projection[CountRecorderInterface]):
 ```
 
 Run the projection with the `ProjectionRunner` class from the `eventsourcing` library,
-by calling it with an application class, a projection class, a concrete tracking
+by calling it with an application class, a projection class, and a concrete tracking
 recorder class.
 
 ```python
