@@ -252,6 +252,12 @@ Run the projection with the `ProjectionRunner` class from the `eventsourcing` li
 by calling it with an application class, a projection class, and a concrete tracking
 recorder class.
 
+The example below shows that when the projection is run, the materialised view is updated
+by processing the event of the upstream event-sourced `TrainingSchool` application. It
+also shows that when tricks are subsequently added to the application's aggregates,
+events continue to be processed, such that the trick counter is incremented in the
+downstream materialised view "read model".
+
 ```python
 import os
 from eventsourcing.projection import ProjectionRunner
@@ -301,10 +307,6 @@ with ProjectionRunner(
     assert dog_count == materialised_view.get_dog_counter()
     assert trick_count + 2 == materialised_view.get_trick_counter()
 ```
-
-The example above shows that when tricks are added to the upstream event-sourced
-application "write model", the trick counter is incremented in the downstream
-materialised view "read model".
 
 To implement a materialised view that uses PostgreSQL, please use the
 `PostgresTrackingRecorder` class from the `eventsourcing` library (see
