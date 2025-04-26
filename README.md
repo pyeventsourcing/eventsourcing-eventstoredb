@@ -86,7 +86,7 @@ import os
 os.environ['TRAININGSCHOOL_PERSISTENCE_MODULE'] = 'eventsourcing_eventstoredb'
 ```
 
-Also set environment variable `EVENTSTOREDB_URI` and to an EventStoreDB
+Also set environment variable `EVENTSTOREDB_URI` to an EventStoreDB
 connection string URI. This value will be used as the `uri`
 argument when the `ESDBClient` class is constructed by this package.
 
@@ -148,7 +148,7 @@ To project the state of an event-sourced application "write model" into a
 materialised view "read model", first define an interface for the materialised view
 using the `TrackingRecorder` class from the `eventsourcing` library.
 
-The example below defines methods to counts dogs and tricks for the `TrainingSchool`
+The example below defines methods to count dogs and tricks for the `TrainingSchool`
 application
 
 ```python
@@ -173,7 +173,7 @@ class MaterialisedViewInterface(TrackingRecorder):
         pass
 ```
 
-The `MaterialisedViewInterface` can be implemented to use a concrete database.
+The `MaterialisedViewInterface` can be implemented as a concrete view class using a durable database such as PostgreSQL.
 
 The example below counts dogs and tricks in memory, using "plain old Python objects".
 
@@ -188,11 +188,13 @@ class InMemoryMaterialiseView(POPOTrackingRecorder, MaterialisedViewInterface):
 
     def incr_dog_counter(self, tracking: Tracking) -> None:
         with self._database_lock:
+            self._assert_tracking_uniqueness(tracking)
             self._insert_tracking(tracking)
             self._dog_counter += 1
 
     def incr_trick_counter(self, tracking: Tracking) -> None:
         with self._database_lock:
+            self._assert_tracking_uniqueness(tracking)
             self._insert_tracking(tracking)
             self._trick_counter += 1
 
