@@ -121,7 +121,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                 current_version=current_version,
                 events=new_events,
             )
-        except kurrentdbclient.exceptions.WrongCurrentVersion as e:
+        except kurrentdbclient.exceptions.WrongCurrentVersionError as e:
             raise IntegrityError(e) from e
         except Exception as e:
             raise PersistenceError(e) from e
@@ -212,7 +212,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                     state=ev.data,
                 )
                 stored_events.append(se)
-        except kurrentdbclient.exceptions.NotFound:
+        except kurrentdbclient.exceptions.NotFoundError:
             return []
 
         return stored_events
@@ -317,7 +317,7 @@ class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
         while not self._has_been_stopped:
             try:
                 recorded_event = next(self._esdb_subscription)
-            except kurrentdbclient.exceptions.ConsumerTooSlow:  # pragma: no cover
+            except kurrentdbclient.exceptions.ConsumerTooSlowError:  # pragma: no cover
                 # Sometimes the database drops the connection just after starting.
                 self._esdb_subscription = self._recorder.client.subscribe_to_all(
                     commit_position=self._last_notification_id,

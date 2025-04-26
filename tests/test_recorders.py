@@ -258,19 +258,19 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
         )
 
         # Can't store events in more than one stream.
+        stored_event4 = StoredEvent(
+            originator_id=uuid4(),
+            originator_version=self.INITIAL_VERSION,
+            topic="topic4",
+            state=b'{"state": "state4"}',
+        )
+        stored_event5 = StoredEvent(
+            originator_id=uuid4(),
+            originator_version=self.INITIAL_VERSION,
+            topic="topic5",
+            state=b'{"state": "state5"}',
+        )
         with self.assertRaises(ProgrammingError):
-            stored_event4 = StoredEvent(
-                originator_id=uuid4(),
-                originator_version=self.INITIAL_VERSION,
-                topic="topic4",
-                state=b'{"state": "state4"}',
-            )
-            stored_event5 = StoredEvent(
-                originator_id=uuid4(),
-                originator_version=self.INITIAL_VERSION,
-                topic="topic5",
-                state=b'{"state": "state5"}',
-            )
             recorder.insert_events([stored_event4, stored_event5])
 
 
@@ -412,7 +412,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
             recorder.select_notifications(
                 max_notification_id1 + 1, 10, inclusive_of_start=False
             )
-            self.assertIn("InvalidPostion", str(cm.exception))
+        self.assertIn("InvalidPosition", str(cm.exception))
 
         notifications = recorder.select_notifications(
             max_notification_id1, 10, inclusive_of_start=False

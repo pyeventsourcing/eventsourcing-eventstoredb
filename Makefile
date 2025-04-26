@@ -1,27 +1,33 @@
 .EXPORT_ALL_VARIABLES:
 
-POETRY ?= poetry
-POETRY_INSTALLER_URL ?= https://install.python-poetry.org
-POETRY_VERSION=1.5.1
-
 # EVENTSTORE_DOCKER_IMAGE ?= eventstore/eventstore:23.10.0-bookworm-slim
 EVENTSTORE_DOCKER_IMAGE ?= docker.eventstore.com/eventstore/eventstoredb-ee:24.10.0-x64-8.0-bookworm-slim
 
+PYTHONUNBUFFERED=1
+
+POETRY_VERSION=2.1.2
+POETRY ?= poetry@$(POETRY_VERSION)
 
 .PHONY: install-poetry
 install-poetry:
-	curl -sSL $(POETRY_INSTALLER_URL) | python3
+	@pipx install --suffix="@$(POETRY_VERSION)" "poetry==$(POETRY_VERSION)"
 	$(POETRY) --version
-
-.PHONY: install-packages
-install-packages:
-	$(POETRY) --version
-	$(POETRY) install --no-root -vv $(opts)
 
 .PHONY: install
 install:
-	$(POETRY) --version
-	$(POETRY) install -vv $(opts)
+	$(POETRY) sync  -vv $(opts)
+
+.PHONY: install-packages
+install-packages:
+	$(POETRY) sync --no-root -vv $(opts)
+
+.PHONY: update-lockfile
+update-lockfile:
+	$(POETRY) lock
+
+.PHONY: update-packages
+update-packages: update-lockfile install-packages
+
 
 .PHONY: install-pre-commit-hooks
 install-pre-commit-hooks:
@@ -78,7 +84,8 @@ fmt: fmt-black fmt-isort
 
 .PHONY: test
 test:
-	$(POETRY) run python -m pytest -v $(opts) $(call tests,.)
+	$(POETRY) run coverage run -m unittest discover . -v
+	$(POETRY) run coverage report --fail-under=100 --show-missing
 
 .PHONY: build
 build:

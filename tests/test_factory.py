@@ -12,7 +12,7 @@ from eventsourcing.persistence import (
 from eventsourcing.tests.persistence import InfrastructureFactoryTestCase
 from eventsourcing.utils import Environment
 
-from eventsourcing_eventstoredb.factory import Factory
+from eventsourcing_eventstoredb.factory import EventStoreDBFactory
 from eventsourcing_eventstoredb.recorders import (
     EventStoreDBAggregateRecorder,
     EventStoreDBApplicationRecorder,
@@ -20,12 +20,12 @@ from eventsourcing_eventstoredb.recorders import (
 from tests.common import INSECURE_CONNECTION_STRING
 
 
-class TestFactory(InfrastructureFactoryTestCase):
+class TestFactory(InfrastructureFactoryTestCase[EventStoreDBFactory]):
     def test_create_process_recorder(self) -> None:
         self.skipTest("EventStoreDB doesn't support tracking records")
 
-    def expected_factory_class(self) -> Type[InfrastructureFactory[TrackingRecorder]]:
-        return Factory
+    def expected_factory_class(self) -> Type[EventStoreDBFactory]:
+        return EventStoreDBFactory
 
     def expected_aggregate_recorder_class(self) -> Type[AggregateRecorder]:
         return EventStoreDBAggregateRecorder
@@ -47,13 +47,15 @@ class TestFactory(InfrastructureFactoryTestCase):
 
     def setUp(self) -> None:
         self.env = Environment("TestCase")
-        self.env[InfrastructureFactory.PERSISTENCE_MODULE] = Factory.__module__
-        self.env[Factory.EVENTSTOREDB_URI] = INSECURE_CONNECTION_STRING
+        self.env[InfrastructureFactory.PERSISTENCE_MODULE] = (
+            EventStoreDBFactory.__module__
+        )
+        self.env[EventStoreDBFactory.EVENTSTOREDB_URI] = INSECURE_CONNECTION_STRING
         super().setUp()
 
     def tearDown(self) -> None:
-        if Factory.EVENTSTOREDB_URI in os.environ:
-            del os.environ[Factory.EVENTSTOREDB_URI]
+        if EventStoreDBFactory.EVENTSTOREDB_URI in os.environ:
+            del os.environ[EventStoreDBFactory.EVENTSTOREDB_URI]
         super().tearDown()
 
 

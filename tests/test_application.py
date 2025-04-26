@@ -23,7 +23,7 @@ from tests.common import INSECURE_CONNECTION_STRING
 
 class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
     timeit_number = 30 * TIMEIT_FACTOR
-    expected_factory_topic = "eventsourcing_eventstoredb.factory:Factory"
+    expected_factory_topic = "eventsourcing_eventstoredb.factory:EventStoreDBFactory"
 
     def setUp(self) -> None:
         self.original_initial_version = Aggregate.INITIAL_VERSION
@@ -342,8 +342,8 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
     def test_construct_secure_without_root_certificates(self) -> None:
         os.environ["EVENTSTOREDB_URI"] = "esdb://admin:changeit@localhost"
+        app = BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
         with self.assertRaises(PersistenceError) as cm:
-            app = BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
             app.open_account(full_name="Bob", email_address="bob@example.com")
         self.assertIsInstance(cm.exception.args[0], kurrentdbclient.exceptions.SSLError)
 

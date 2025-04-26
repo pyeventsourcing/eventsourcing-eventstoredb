@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "eventsourcing-eventstoredb"
-version = "1.2.0b2"
+version = "1.2.0b3"
 description = "Python package for eventsourcing with EventStoreDB"
 authors = [
     "John Bywater <john.bywater@appropriatesoftware.net>",
@@ -16,7 +16,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python",
 ]
@@ -26,14 +25,14 @@ repository = "https://github.com/pyeventsourcing/eventsourcing-eventstoredb"
 include = ["eventsourcing_eventstoredb/py.typed"]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4.0,!=3.9.0,!=3.9.1"
-eventsourcing = { version = "9.4.0a4" }
+python = ">=3.9,<4.0,!=3.9.0,!=3.9.1"
+eventsourcing = { version = "9.4.0b2" }
 #eventsourcing = { path = "../eventsourcing/", develop = true }
 #esdbclient = { path = "../esdbclient/", develop = true }
-kurrentdbclient = { version = "1.0b2" }
+kurrentdbclient = { version = "1.0" }
 
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = { version = "*", allow-prereleases = true }
 flake8 = "*"
 flake8-broken-line = "*"
@@ -77,30 +76,39 @@ exclude = '''
 
 [tool.coverage.run]
 branch = true
-omit = []
+source = [
+    "eventsourcing_eventstoredb"
+]
+relative_files = true
+omit = [
+    "tests/*",
+]
 
 [tool.coverage.report]
 exclude_lines = [
   # Have to re-enable the standard pragma
   "pragma: no cover",
-  # Don't complain about missing debug-only code:
-  "def __repr__",
-  "if self.debug",
-  # Don't complain about some magic methods:
-  "def __str__",
-  # Don't complain if tests don't hit defensive assertion code:
-  "raise AssertionError",
+#  # Don't complain about missing debug-only code:
+#  "def __repr__",
+#  "if self.debug",
+#  # Don't complain about some magic methods:
+#  "def __str__",
+#  # Don't complain if tests don't hit defensive assertion code:
+#  "raise AssertionError",
   "raise NotImplementedError",
-  # Don't complain if non-runnable code isn't run:
-  "if 0:",
-  "if __name__ == .__main__.:",
-  # Don't complain about empty realizations
-  "pass",
-  # Don't complain about abstract methods
-  "@abc.abstractmethod"
+#  # Don't complain if non-runnable code isn't run:
+#  "if 0:",
+#  "if __name__ == .__main__.:",
+#  # Don't complain about empty realizations
+#  "pass",
+#  # Don't complain about abstract methods
+#  "@abc.abstractmethod"
 ]
-ignore_errors = true
-precision = 2
+#ignore_errors = true
+#precision = 2
+exclude_also = [
+    'if TYPE_CHECKING:'
+]
 
 [tool.isort]
 combine_as_imports = true

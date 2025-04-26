@@ -75,10 +75,10 @@ class DogDetails(TypedDict):
     tricks: Tuple[str, ...]
 ```
 
-Configure the application to use EventStoreDB by setting the application environment
-variable `PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. You can do this
-in actual environment variables, by passing in an `env` argument when constructing
-the application object, or by setting `env` on the application class.
+Configure the `TrainingSchool` application to use EventStoreDB by setting the
+environment variable `PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. You
+can do this in actual environment variables, or by passing in an `env` argument when
+constructing  the application object, or by setting `env` on the application class.
 
 ```python
 import os
@@ -142,7 +142,7 @@ assert dog_details['name'] == 'Fido'
 assert dog_details['tricks'] == ('roll over', 'play dead')
 ```
 
-## Projections
+## Eventually-consistent materialised views
 
 To project the state of an event-sourced application "write model" into a
 materialised view "read model", first define an interface for the materialised view
@@ -155,7 +155,7 @@ application
 from abc import abstractmethod
 from eventsourcing.persistence import Tracking, TrackingRecorder
 
-class CountRecorderInterface(TrackingRecorder):
+class MaterialisedViewInterface(TrackingRecorder):
     @abstractmethod
     def incr_dog_counter(self, tracking: Tracking) -> None:
         pass
@@ -173,14 +173,14 @@ class CountRecorderInterface(TrackingRecorder):
         pass
 ```
 
-The `CountRecorderInterface` can be implemented to use a concrete database.
+The `MaterialisedViewInterface` can be implemented to use a concrete database.
 
 The example below counts dogs and tricks in memory, using "plain old Python objects".
 
 ```python
 from eventsourcing.popo import POPOTrackingRecorder
 
-class POPOCountRecorder(POPOTrackingRecorder, CountRecorderInterface):
+class InMemoryMaterialiseView(POPOTrackingRecorder, MaterialisedViewInterface):
     def __init__(self):
         super().__init__()
         self._dog_counter = 0
@@ -203,15 +203,11 @@ class POPOCountRecorder(POPOTrackingRecorder, CountRecorderInterface):
         return self._trick_counter
 ```
 
-After defining the materialised view interface, define how events will be processed
-using the `Projection` class from the `eventsourcing` library.
+Define how events will be processed using the `Projection` class from the `eventsourcing` library.
 
 The example below processes `Dog` events. The `Dog.Registered` events are processed
-by calling `incr_dog_counter()`. The `Dog.TrickAdded` events are processed by calling
-`incr_trick_counter()`.
-
-Setting the event topics on the `CountProjection` class is not necessary, but speeds
-event processing by filtering events in the application's database.
+by calling `incr_dog_counter()` on the materialised view. The `Dog.TrickAdded` events
+are processed by calling `incr_trick_counter()`.
 
 ```python
 from eventsourcing.domain import DomainEventProtocol
@@ -220,36 +216,26 @@ from eventsourcing.projection import Projection
 from eventsourcing.utils import get_topic
 
 
-class CountProjection(Projection[CountRecorderInterface]):
+class CountProjection(Projection[MaterialisedViewInterface]):
     topics = (
         get_topic(Dog.Registered),
         get_topic(Dog.TrickAdded),
     )
 
-    def __init__(
-        self,
-        tracking_recorder: CountRecorderInterface,
-    ):
-        assert isinstance(tracking_recorder, CountRecorderInterface), type(
-            tracking_recorder
-        )
-        super().__init__(tracking_recorder)
-
     @singledispatchmethod
     def process_event(self, event: DomainEventProtocol, tracking: Tracking) -> None:
+        pass
 
     @process_event.register
-    def aggregate_created(self, event: Dog.Registered, tracking: Tracking) -> None:
-        self.tracking_recorder.incr_dog_counter(tracking)
+    def dog_registered(self, event: Dog.Registered, tracking: Tracking) -> None:
+        self.view.incr_dog_counter(tracking)
 
     @process_event.register
-    def aggregate_event(self, event: Dog.TrickAdded, tracking: Tracking) -> None:
-        self.tracking_recorder.incr_trick_counter(tracking)
+    def trick_added(self, event: Dog.TrickAdded, tracking: Tracking) -> None:
+        self.view.incr_trick_counter(tracking)
 ```
 
-Run the projection with the `ProjectionRunner` class from the `eventsourcing` library,
-by calling it with an application class, a projection class, and a concrete tracking
-recorder class.
+Run the projection with the `ProjectionRunner` class from the `eventsourcing` library.
 
 The example below shows that when the projection is run, the materialised view is updated
 by processing the event of the upstream event-sourced `TrainingSchool` application. It
@@ -264,17 +250,17 @@ from eventsourcing.projection import ProjectionRunner
 with ProjectionRunner(
     application_class=TrainingSchool,
     projection_class=CountProjection,
-    tracking_recorder_class=POPOCountRecorder,
+    view_class=InMemoryMaterialiseView,
 ) as runner:
 
     # Get "read model" instance from runner, because
     # state of materialised view is stored in memory.
-    materialised_view = runner.projection.tracking_recorder
+    materialised_view = runner.projection.view
 
     # Wait for the existing events to be processed.
     materialised_view.wait(
-        training_school.name,
-        training_school.recorder.max_notification_id(),
+        application_name=training_school.name,
+        notification_id=training_school.recorder.max_notification_id(),
     )
 
     # Query the "read model".
@@ -284,10 +270,10 @@ with ProjectionRunner(
     # Record another event in "write model".
     notification_id = training_school.add_trick('Fido', 'sit and stay')
 
-    # Wait for the new event to be processed by the projection.
+    # Wait for the new event to be processed.
     materialised_view.wait(
-        training_school.name,
-        notification_id,
+        application_name=training_school.name,
+        notification_id=notification_id,
     )
 
     # Expect one trick more, same number of dogs.
@@ -308,10 +294,9 @@ with ProjectionRunner(
     assert trick_count + 2 == materialised_view.get_trick_counter()
 ```
 
-To implement a materialised view that uses PostgreSQL, please use the
-`PostgresTrackingRecorder` class from the `eventsourcing` library (see
-the library docs for more information about projecting the state of
-an event-sourced application into PostgreSQL).
+See the Python `eventsourcing` package documentation for more information about
+projecting the state of an event-sourced application into materialised views
+that use a durable database such as SQLite and PostgreSQL.
 
 ## More information
 

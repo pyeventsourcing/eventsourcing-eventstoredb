@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
-from .factory import Factory
+from .factory import EventStoreDBFactory
 
-__all__ = ["Factory"]
+__all__ = ["EventStoreDBFactory"]

@@ -19,7 +19,7 @@ from eventsourcing_eventstoredb.recorders import (
 )
 
 
-class Factory(InfrastructureFactory[TrackingRecorder]):
+class EventStoreDBFactory(InfrastructureFactory[TrackingRecorder]):
     """
     Infrastructure factory for EventStoreDB infrastructure.
     """
@@ -54,10 +54,10 @@ class Factory(InfrastructureFactory[TrackingRecorder]):
     def tracking_recorder(
         self, tracking_recorder_class: Type[TrackingRecorder] | None = None
     ) -> TrackingRecorder:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def process_recorder(self) -> ProcessRecorder:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def __del__(self) -> None:
         if hasattr(self, "client"):
