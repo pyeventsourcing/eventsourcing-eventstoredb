@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "eventsourcing-eventstoredb"
 version = "1.2.0b4"
 dependencies = [
-  "eventsourcing>=9.4.1,<10.0",
+  "eventsourcing>=9.4.2,<10.0",
   "kurrentdbclient>=1.0.2,<2.0",
 ]
 description = "Python package for eventsourcing with EventStoreDB"

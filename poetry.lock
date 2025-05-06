@@ -153,14 +153,14 @@ toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
 [[package]]
 name = "eventsourcing"
-version = "9.4.1"
+version = "9.4.2"
 description = "Event sourcing in Python"
 optional = false
 python-versions = ">=3.9.2"
 groups = ["main"]
 files = [
-    {file = "eventsourcing-9.4.1-py3-none-any.whl", hash = "sha256:fe2a0264c1b642a3f24d1be546aec1da8a49a23a5b37a75ecb17d864751af819"},
-    {file = "eventsourcing-9.4.1.tar.gz", hash = "sha256:81b4b2008516e332731575f5f43f5695eea8456eea1c79cf245309f60286ea04"},
+    {file = "eventsourcing-9.4.2-py3-none-any.whl", hash = "sha256:ed36acd122895c2c2a87e1b1a0e14914f52d27587710803922e6d558f0ba328d"},
+    {file = "eventsourcing-9.4.2.tar.gz", hash = "sha256:e95d0c1ac0148efbdd98708b97425949663149c1ec8f2bfaff83e85ea7026f43"},
 ]
 
 [package.dependencies]
@@ -658,4 +658,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9.2"
-content-hash = "3edfc22e4ce64259c2fa31730eed265c34a87ce1e2c137bdef6e772e17dcb64f"
+content-hash = "6f41655143ab04127d9dcc51bbc9f130b3a76ae59e59283027950551ab5a1a89"
