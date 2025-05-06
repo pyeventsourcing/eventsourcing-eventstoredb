@@ -25,31 +25,12 @@ update-lock:
 	$(POETRY) update --lock -v
 
 
-.PHONY: lint
-lint: lint-python
-
-.PHONY: lint-black
-lint-black:
-	$(POETRY) run black --check --diff .
-
-.PHONY: lint-flake8
-lint-flake8:
-	$(POETRY) run flake8
-
-.PHONY: lint-isort
-lint-isort:
-	$(POETRY) run isort --check-only --diff .
-
-.PHONY: lint-mypy
-lint-mypy:
-	$(POETRY) run mypy
-
-.PHONY: lint-python
-lint-python: lint-black lint-flake8 lint-isort lint-mypy
-
-
 .PHONY: fmt
-fmt: fmt-black fmt-isort
+fmt: fmt-isort fmt-black
+
+.PHONY: fmt-ruff
+fmt-ruff:
+	$(POETRY) run ruff check --fix .
 
 .PHONY: fmt-black
 fmt-black:
@@ -58,6 +39,30 @@ fmt-black:
 .PHONY: fmt-isort
 fmt-isort:
 	$(POETRY) run isort .
+
+
+.PHONY: lint
+lint: lint-black lint-ruff lint-isort lint-mypy lint-pyright
+
+.PHONY: lint-black
+lint-black:
+	$(POETRY) run black --check --diff .
+
+.PHONY: lint-ruff
+lint-ruff:
+	$(POETRY) run ruff check .
+
+.PHONY: lint-isort
+lint-isort:
+	$(POETRY) run isort --check-only --diff .
+
+.PHONY: lint-pyright
+lint-pyright:
+	$(POETRY) run pyright .
+
+.PHONY: lint-mypy
+lint-mypy:
+	$(POETRY) run mypy
 
 
 .PHONY: test

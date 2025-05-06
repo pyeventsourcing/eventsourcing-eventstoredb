@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import List, Tuple, TypedDict
+from typing import TypedDict
 from unittest import TestCase
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
@@ -60,7 +59,7 @@ class Dog(Aggregate):
     @event(Registered)
     def __init__(self, name: str) -> None:
         self.name = name
-        self.tricks: List[str] = []
+        self.tricks: list[str] = []
 
     @event(TrickAdded)
     def add_trick(self, trick: str) -> None:
@@ -69,7 +68,7 @@ class Dog(Aggregate):
 
 class DogDetails(TypedDict):
     name: str
-    tricks: Tuple[str, ...]
+    tricks: tuple[str, ...]
 
 
 class CounterViewInterface(TrackingRecorder):

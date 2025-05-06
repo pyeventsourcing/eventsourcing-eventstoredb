@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import json
 import re
 import sys
-from typing import Any, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import kurrentdbclient.exceptions
@@ -26,6 +25,9 @@ from kurrentdbclient import (
     StreamState,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 class EventStoreDBAggregateRecorder(AggregateRecorder):
     SNAPSHOT_STREAM_PREFIX = "snapshot-$"
@@ -33,23 +35,23 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
     def __init__(
         self,
         client: KurrentDBClient,
-        for_snapshotting: bool = False,
         *args: Any,
+        for_snapshotting: bool = False,
         **kwargs: Any,
     ) -> None:
-        super(EventStoreDBAggregateRecorder, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.client = client
         self.for_snapshotting = for_snapshotting
 
     def insert_events(
-        self, stored_events: List[StoredEvent], **kwargs: Any
-    ) -> Optional[Sequence[int]]:
+        self, stored_events: list[StoredEvent], **kwargs: Any
+    ) -> Sequence[int] | None:
         self._insert_events(stored_events, **kwargs)
         return None
 
-    def _insert_events(
-        self, stored_events: List[StoredEvent], **kwargs: Any
-    ) -> Optional[Sequence[int]]:
+    def _insert_events(  # noqa: C901
+        self, stored_events: list[StoredEvent], **kwargs: Any
+    ) -> Sequence[int] | None:
         if self.for_snapshotting:
             # Protect against appending old snapshot after new.
             assert len(stored_events) == 1, len(stored_events)
@@ -68,13 +70,14 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                 return []
         else:
             # Make sure all stored events have same originator ID.
-            originator_ids = list(set([e.originator_id for e in stored_events]))
-            if len(originator_ids) == 0:
+            set_of_originator_ids = {e.originator_id for e in stored_events}
+            if len(set_of_originator_ids) == 0:
                 return []
-            elif len(originator_ids) > 1:
-                raise ProgrammingError(
+            if len(set_of_originator_ids) > 1:
+                msg = (
                     "EventStoreDB can't atomically store events in more than one stream"
                 )
+                raise ProgrammingError(msg)
 
             # Make sure stored events have a gapless sequence of originator_versions.
             for i in range(1, len(stored_events)):
@@ -82,10 +85,11 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                     stored_events[i].originator_version
                     != i + stored_events[0].originator_version
                 ):
-                    raise IntegrityError("Gap detected in originator versions")
+                    msg = "Gap detected in originator versions"
+                    raise IntegrityError(msg)
 
         # Convert StoredEvent objects to NewEvent objects.
-        new_events: List[NewEvent] = []
+        new_events: list[NewEvent] = []
         for stored_event in stored_events:
             if self.for_snapshotting:
                 metadata = json.dumps(
@@ -108,12 +112,11 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
 
         # Decide 'current_version' argument.
         if self.for_snapshotting:
-            current_version: Union[int, StreamState] = StreamState.ANY  # Disable OCC.
+            current_version: int | StreamState = StreamState.ANY  # Disable OCC.
+        elif stored_events[0].originator_version == 0:
+            current_version = StreamState.NO_STREAM
         else:
-            if stored_events[0].originator_version == 0:
-                current_version = StreamState.NO_STREAM
-            else:
-                current_version = stored_events[0].originator_version - 1
+            current_version = stored_events[0].originator_version - 1
 
         try:
             commit_position = self.client.append_events(
@@ -133,11 +136,12 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
     def select_events(  # noqa: C901
         self,
         originator_id: UUID,
-        gt: Optional[int] = None,
-        lte: Optional[int] = None,
+        *,
+        gt: int | None = None,
+        lte: int | None = None,
         desc: bool = False,
-        limit: Optional[int] = None,
-    ) -> List[StoredEvent]:
+        limit: int | None = None,
+    ) -> list[StoredEvent]:
         stream_name = str(originator_id)
         if self.for_snapshotting:
             if desc and lte:
@@ -149,42 +153,29 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
                 position = gt + 1
                 if lte is not None:
                     _limit = max(0, lte - gt)
-                    if limit is None:
-                        limit = _limit
-                    else:
-                        limit = min(limit, _limit)
+                    limit = _limit if limit is None else min(limit, _limit)
             else:
                 position = None
                 if lte is not None:
                     _limit = max(0, lte + 1)
-                    if limit is None:
-                        limit = _limit
-                    else:
-                        limit = min(limit, _limit)
+                    limit = _limit if limit is None else min(limit, _limit)
 
+        elif lte is not None:
+            current_position = self.client.get_current_version(stream_name)
+            if current_position is StreamState.NO_STREAM:
+                return []
+            position = lte = min(current_position, lte)
+            if gt is not None:
+                _limit = max(0, lte - gt)
+                limit = _limit if limit is None else min(limit, _limit)
         else:
-            if lte is not None:
+            position = None
+            if gt is not None:
                 current_position = self.client.get_current_version(stream_name)
                 if current_position is StreamState.NO_STREAM:
                     return []
-                position = lte = min(current_position, lte)
-                if gt is not None:
-                    _limit = max(0, lte - gt)
-                    if limit is None:
-                        limit = _limit
-                    else:
-                        limit = min(limit, _limit)
-            else:
-                position = None
-                if gt is not None:
-                    current_position = self.client.get_current_version(stream_name)
-                    if current_position is StreamState.NO_STREAM:
-                        return []
-                    _limit = max(0, current_position - gt)
-                    if limit is None:
-                        limit = _limit
-                    else:
-                        limit = min(limit, _limit)
+                _limit = max(0, current_position - gt)
+                limit = _limit if limit is None else min(limit, _limit)
 
         if limit == 0:
             return []
@@ -218,27 +209,46 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
         return stored_events
 
 
+def _construct_notification(recorded_event: RecordedEvent) -> Notification:
+    # Catch a failure to reconstruct UUID, so we can see what didn't work.
+    try:
+        originator_id = UUID(recorded_event.stream_name)
+    except ValueError as e:
+        msg = f"{e}: {recorded_event.stream_name}"
+        raise ValueError(msg) from e
+
+    assert recorded_event.commit_position is not None
+    return Notification(
+        id=recorded_event.commit_position,
+        originator_id=originator_id,
+        originator_version=recorded_event.stream_position,
+        topic=recorded_event.type,
+        state=recorded_event.data,
+    )
+
+
 class EventStoreDBApplicationRecorder(
     EventStoreDBAggregateRecorder, ApplicationRecorder
 ):
     def insert_events(
-        self, stored_events: List[StoredEvent], **kwargs: Any
-    ) -> Optional[Sequence[int]]:
+        self, stored_events: list[StoredEvent], **kwargs: Any
+    ) -> Sequence[int] | None:
         return self._insert_events(stored_events, **kwargs)
 
     def select_notifications(
         self,
         start: int | None,
         limit: int,
-        stop: Optional[int] = None,
+        stop: int | None = None,
         topics: Sequence[str] = (),
+        *,
         inclusive_of_start: bool = True,
-    ) -> List[Notification]:
+    ) -> list[Notification]:
         if not inclusive_of_start:
             limit += 1
         recorded_events = self.client.read_all(
             commit_position=start,
-            filter_exclude=DEFAULT_EXCLUDE_FILTER + (".*Snapshot",),
+            filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
             filter_include=[re.escape(t) for t in topics] or [],
             limit=limit,
         )
@@ -255,7 +265,7 @@ class EventStoreDBApplicationRecorder(
 
             # Construct a Notification object from the RecordedEvent object.
             assert isinstance(recorded_event.commit_position, int)
-            notification = self._construct_notification(recorded_event)
+            notification = _construct_notification(recorded_event)
             notifications.append(notification)
 
             # Check we aren't going over the limit, in case we didn't drop the first.
@@ -268,23 +278,6 @@ class EventStoreDBApplicationRecorder(
                 break
 
         return notifications
-
-    def _construct_notification(self, recorded_event: RecordedEvent) -> Notification:
-        # Catch a failure to reconstruct UUID, so we can see what didn't work.
-        try:
-            originator_id = UUID(recorded_event.stream_name)
-        except ValueError as e:
-            raise ValueError(f"{e}: {recorded_event.stream_name}") from e
-
-        assert recorded_event.commit_position is not None
-        notification = Notification(
-            id=recorded_event.commit_position,
-            originator_id=originator_id,
-            originator_version=recorded_event.stream_position,
-            topic=recorded_event.type,
-            state=recorded_event.data,
-        )
-        return notification
 
     def max_notification_id(self) -> int | None:
         return self.client.get_commit_position(
@@ -304,9 +297,7 @@ class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
         gt: int | None = None,
         topics: Sequence[str] = (),
     ):
-        super(EventStoreDBSubscription, self).__init__(
-            recorder=recorder, gt=gt, topics=topics
-        )
+        super().__init__(recorder=recorder, gt=gt, topics=topics)
         self._esdb_subscription = self._recorder.client.subscribe_to_all(
             commit_position=self._last_notification_id,
             filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
@@ -315,21 +306,28 @@ class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
 
     def __next__(self) -> Notification:
         while not self._has_been_stopped:
-            try:
-                recorded_event = next(self._esdb_subscription)
-            except kurrentdbclient.exceptions.ConsumerTooSlowError:  # pragma: no cover
-                # Sometimes the database drops the connection just after starting.
-                self._esdb_subscription = self._recorder.client.subscribe_to_all(
-                    commit_position=self._last_notification_id,
-                    filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
-                    filter_include=self._topics,  # has priority
-                )
-            else:
-                notification = self._recorder._construct_notification(recorded_event)
-                self._last_notification_id = notification.id
-                return notification
+            notification = self._next_notification()
+            if notification is None:  # pragma: no cover
+                continue
+            return notification
 
         raise StopIteration
+
+    def _next_notification(self) -> Notification | None:
+        try:
+            recorded_event = next(self._esdb_subscription)
+        except kurrentdbclient.exceptions.ConsumerTooSlowError:  # pragma: no cover
+            # Sometimes the database drops the connection just after starting.
+            self._esdb_subscription = self._recorder.client.subscribe_to_all(
+                commit_position=self._last_notification_id,
+                filter_exclude=(*DEFAULT_EXCLUDE_FILTER, ".*Snapshot"),
+                filter_include=self._topics,  # has priority
+            )
+            return None
+        else:
+            notification = _construct_notification(recorded_event)
+            self._last_notification_id = notification.id
+            return notification
 
     def stop(self) -> None:
         super().stop()

@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import contextlib
 import os
 import ssl
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from unittest import TestCase
 
 from eventsourcing.utils import clear_topic_cache
@@ -16,14 +16,10 @@ BASE_DIR = Path(__file__).parents[1]
 class TestDocs(TestCase):
     def tearDown(self) -> None:
         clear_topic_cache()
-        try:
+        with contextlib.suppress(KeyError):
             del os.environ["EVENTSTOREDB_URI"]
-        except KeyError:
-            pass
-        try:
+        with contextlib.suppress(KeyError):
             del os.environ["EVENTSTOREDB_ROOT_CERTIFICATES"]
-        except KeyError:
-            pass
 
     def test_readme(self) -> None:
         self._out = ""
@@ -109,16 +105,15 @@ class TestDocs(TestCase):
                     line = ""
                 elif is_code:
                     # Process line in code block.
-                    if is_rst:
-                        # Restructured code block normally indented with four spaces.
-                        if len(line.strip()):
-                            if not line.startswith("    "):
-                                self.fail(
-                                    f"Code line needs 4-char indent: {repr(line)}: "
-                                    f"{doc_path}"
-                                )
-                            # Strip four chars of indentation.
-                            line = line[4:]
+                    # Restructured code block normally indented with four spaces.
+                    if is_rst and len(line.strip()):
+                        if not line.startswith("    "):
+                            self.fail(
+                                f"Code line needs 4-char indent: {line!r}: "
+                                f"{doc_path}"
+                            )
+                        # Strip four chars of indentation.
+                        line = line[4:]
 
                     if len(line.strip()):
                         num_code_lines_in_block += 1
@@ -133,8 +128,12 @@ class TestDocs(TestCase):
 
         source = "\n".join(lines) + "\n"
 
-        globals: Dict[Any, Any] = {}
-        exec(compile(source=source, filename=doc_path, mode="exec"), globals, globals)
+        _globals: dict[Any, Any] = {}
+        exec(  # noqa: S102 "Use of `exec` detected"
+            compile(source=source, filename=doc_path, mode="exec"),
+            _globals,
+            _globals,
+        )
 
         # # Write the code into a temp file.
         # with NamedTemporaryFile("w+") as tempfile:
@@ -168,7 +167,7 @@ class TestDocs(TestCase):
         #     if exit_status:
         #         self.fail(decoded_out + decoded_err)
 
-    def substitute_lines(self, lines: List[str]) -> None:
+    def substitute_lines(self, lines: list[str]) -> None:
         fido_suffix = str(uuid.uuid4())
         for i in range(len(lines)):
             line = lines[i]
@@ -177,7 +176,7 @@ class TestDocs(TestCase):
 
 
 class TestDocsSecure(TestDocs):
-    def substitute_lines(self, lines: List[str]) -> None:
+    def substitute_lines(self, lines: list[str]) -> None:
         super().substitute_lines(lines)
         for i in range(len(lines)):
             line = lines[i]
@@ -190,7 +189,7 @@ class TestDocsSecure(TestDocs):
                 root_certificates = ssl.get_server_certificate(addr=("localhost", 2114))
                 root_certificates = "\\n".join(root_certificates.split("\n"))
                 line = (
-                    "os.environ['EVENTSTOREDB_ROOT_CERTIFICATES'] = '%s'"
-                    % root_certificates
+                    f"os.environ['EVENTSTOREDB_ROOT_CERTIFICATES']"
+                    f" = '{root_certificates}'"
                 )
             lines[i] = line

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from eventsourcing.persistence import ApplicationRecorder
 from eventsourcing.tests.persistence import NonInterleavingNotificationIDsBaseCase
 from kurrentdbclient import KurrentDBClient

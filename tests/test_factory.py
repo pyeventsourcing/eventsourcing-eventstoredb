@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 import os
-from typing import Type
 
 from eventsourcing.persistence import (
     AggregateRecorder,
@@ -24,26 +22,26 @@ class TestFactory(InfrastructureFactoryTestCase[EventStoreDBFactory]):
     def test_create_process_recorder(self) -> None:
         self.skipTest("EventStoreDB doesn't support tracking records")
 
-    def expected_factory_class(self) -> Type[EventStoreDBFactory]:
+    def expected_factory_class(self) -> type[EventStoreDBFactory]:
         return EventStoreDBFactory
 
-    def expected_aggregate_recorder_class(self) -> Type[AggregateRecorder]:
+    def expected_aggregate_recorder_class(self) -> type[AggregateRecorder]:
         return EventStoreDBAggregateRecorder
 
-    def expected_application_recorder_class(self) -> Type[ApplicationRecorder]:
+    def expected_application_recorder_class(self) -> type[ApplicationRecorder]:
         return EventStoreDBApplicationRecorder
 
-    def expected_tracking_recorder_class(self) -> Type[TrackingRecorder]:
-        raise NotImplementedError()
+    def expected_tracking_recorder_class(self) -> type[TrackingRecorder]:
+        raise NotImplementedError
 
-    def tracking_recorder_subclass(self) -> Type[TrackingRecorder]:
-        raise NotImplementedError()
+    def tracking_recorder_subclass(self) -> type[TrackingRecorder]:
+        raise NotImplementedError
 
     def test_create_tracking_recorder(self) -> None:
         self.skipTest("EventStoreDB doesn't support tracking records")
 
-    def expected_process_recorder_class(self) -> Type[ProcessRecorder]:
-        raise NotImplementedError()
+    def expected_process_recorder_class(self) -> type[ProcessRecorder]:
+        raise NotImplementedError
 
     def setUp(self) -> None:
         self.env = Environment("TestCase")

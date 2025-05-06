@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+import contextlib
 import os
 from decimal import Decimal
 from itertools import chain
@@ -7,7 +7,7 @@ from uuid import uuid4
 import kurrentdbclient.exceptions
 from eventsourcing.application import Application, EventSourcedLog
 from eventsourcing.domain import Aggregate, DomainEvent
-from eventsourcing.persistence import PersistenceError
+from eventsourcing.persistence import InfrastructureFactoryError, PersistenceError
 from eventsourcing.projection import ApplicationSubscription
 from eventsourcing.system import NotificationLogReader
 from eventsourcing.tests.application import (
@@ -34,14 +34,10 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
     def tearDown(self) -> None:
         Aggregate.INITIAL_VERSION = self.original_initial_version
-        try:
+        with contextlib.suppress(KeyError):
             del os.environ["PERSISTENCE_MODULE"]
-        except KeyError:
-            pass
-        try:
+        with contextlib.suppress(KeyError):
             del os.environ["EVENTSTOREDB_URI"]
-        except KeyError:
-            pass
         super().tearDown()
 
     def test_example_application(self) -> None:
@@ -55,7 +51,9 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         assert max_notification_id1 is not None
 
         # Select notifications.
-        notifications = app.notification_log.select(max_notification_id1 + 1, 10)
+        notifications = app.notification_log.select(
+            start=max_notification_id1, limit=10, inclusive_of_start=False
+        )
         self.assertEqual(len(notifications), 0)
 
         # Check AccountNotFound exception.
@@ -336,7 +334,7 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
 
     def test_construct_without_uri(self) -> None:
         del os.environ["EVENTSTOREDB_URI"]
-        with self.assertRaises(EnvironmentError) as cm:
+        with self.assertRaises(InfrastructureFactoryError) as cm:
             BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
         self.assertIn("EVENTSTOREDB_URI", str(cm.exception))
 

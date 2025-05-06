@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from concurrent.futures.thread import ThreadPoolExecutor
-from datetime import datetime
 from typing import cast
 from uuid import uuid4
 
 import kurrentdbclient.exceptions
+from eventsourcing.domain import datetime_now_with_tzinfo
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
@@ -37,7 +36,7 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
         return EventStoreDBAggregateRecorder(client=self.client)
 
     def test_insert_and_select(self) -> None:
-        super(TestEventStoreDBAggregateRecorder, self).test_insert_and_select()
+        super().test_insert_and_select()
         # Construct the recorder.
         recorder = self.create_recorder()
 
@@ -308,7 +307,9 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(
             len(
                 recorder.select_notifications(
-                    max_notification_id1, 10, inclusive_of_start=False
+                    start=max_notification_id1,
+                    limit=10,
+                    inclusive_of_start=False,
                 )
             ),
             0,
@@ -316,18 +317,19 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(
             len(
                 recorder.select_notifications(
-                    max_notification_id1, 3, topics=["topic1"], inclusive_of_start=False
+                    start=max_notification_id1,
+                    limit=3,
+                    topics=["topic1"],
+                    inclusive_of_start=False,
                 )
             ),
             0,
         )
 
-        # Note: max_notification_id1 + 1 would ordinarily cause an "invalid position"
-        # database error, but because no subsequent events have been written it doesn't...
         self.assertEqual(
             len(
                 recorder.select_notifications(
-                    max_notification_id1 + 1, 10, inclusive_of_start=False
+                    start=max_notification_id1, limit=10, inclusive_of_start=False
                 )
             ),
             0,
@@ -512,7 +514,8 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(notifications[0].originator_id, originator_id2)
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
 
-        # Select a limited number of notifications from later position (inclusive of start).
+        # Select a limited number of notifications
+        # from later position (inclusive of start).
         notifications = recorder.select_notifications(
             max_notification_id2, 1, inclusive_of_start=True
         )
@@ -575,14 +578,14 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
 
         def read(last_notification_id: int | None) -> None:
             subscription = recorder.subscribe(last_notification_id)
-            start = datetime.now()
+            start = datetime_now_with_tzinfo()
             with subscription:
                 for i, _ in enumerate(subscription):
                     # print("Read", i+1, "notifications")
                     # last_notification_id = notification.id
                     if i + 1 == num_events:
                         break
-            duration = datetime.now() - start
+            duration = datetime_now_with_tzinfo() - start
             print(
                 "Finished reading",
                 num_events,
@@ -592,7 +595,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
             )
 
         def write() -> None:
-            start = datetime.now()
+            start = datetime_now_with_tzinfo()
             for _ in range(num_batches):
                 originator_id = uuid4()
                 events = []
@@ -606,7 +609,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
                     events.append(stored_event)
                 recorder.insert_events(events)
                 # print("Wrote", i + 1, "notifications")
-            duration = datetime.now() - start
+            duration = datetime_now_with_tzinfo() - start
             print(
                 "Finished writing",
                 num_events,

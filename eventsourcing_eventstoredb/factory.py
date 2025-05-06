@@ -1,22 +1,24 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from typing import Type
+from typing import TYPE_CHECKING
 
 from eventsourcing.persistence import (
     AggregateRecorder,
     ApplicationRecorder,
     InfrastructureFactory,
+    InfrastructureFactoryError,
     ProcessRecorder,
     TrackingRecorder,
 )
-from eventsourcing.utils import Environment
 from kurrentdbclient import KurrentDBClient
 
 from eventsourcing_eventstoredb.recorders import (
     EventStoreDBAggregateRecorder,
     EventStoreDBApplicationRecorder,
 )
+
+if TYPE_CHECKING:
+    from eventsourcing.utils import Environment
 
 
 class EventStoreDBFactory(InfrastructureFactory[TrackingRecorder]):
@@ -31,11 +33,12 @@ class EventStoreDBFactory(InfrastructureFactory[TrackingRecorder]):
         super().__init__(env)
         eventstoredb_uri = self.env.get(self.EVENTSTOREDB_URI)
         if eventstoredb_uri is None:
-            raise EnvironmentError(
+            msg = (
                 f"{self.EVENTSTOREDB_URI!r} not found "
                 "in environment with keys: "
                 f"{', '.join(self.env.create_keys(self.EVENTSTOREDB_URI))!r}"
             )
+            raise InfrastructureFactoryError(msg)
         root_certificates = self.env.get(self.EVENTSTOREDB_ROOT_CERTIFICATES)
         self.client = KurrentDBClient(
             uri=eventstoredb_uri,
@@ -52,7 +55,7 @@ class EventStoreDBFactory(InfrastructureFactory[TrackingRecorder]):
         return EventStoreDBApplicationRecorder(self.client)
 
     def tracking_recorder(
-        self, tracking_recorder_class: Type[TrackingRecorder] | None = None
+        self, tracking_recorder_class: type[TrackingRecorder] | None = None
     ) -> TrackingRecorder:
         raise NotImplementedError
 
