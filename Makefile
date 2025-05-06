@@ -15,39 +15,18 @@ install-poetry:
 
 .PHONY: install
 install:
-	$(POETRY) sync  -vv $(opts)
+	$(POETRY) sync --all-extras $(opts)
 
-.PHONY: install-packages
-install-packages:
-	$(POETRY) sync --no-root -vv $(opts)
+.PHONY: update
+update: update-lock install
 
-.PHONY: update-lockfile
-update-lockfile:
-	$(POETRY) lock
-
-.PHONY: update-packages
-update-packages: update-lockfile install-packages
+.PHONY: update-lock
+update-lock:
+	$(POETRY) update --lock -v
 
 
-.PHONY: install-pre-commit-hooks
-install-pre-commit-hooks:
-ifeq ($(opts),)
-	$(POETRY) run pre-commit install
-endif
-
-.PHONY: uninstall-pre-commit-hooks
-uninstall-pre-commit-hooks:
-ifeq ($(opts),)
-	$(POETRY) run pre-commit uninstall
-endif
-
-.PHONY: lock-packages
-lock-packages:
-	$(POETRY) lock -vv --no-update
-
-.PHONY: update-packages
-update-packages:
-	$(POETRY) update -vv
+.PHONY: lint
+lint: lint-python
 
 .PHONY: lint-black
 lint-black:
@@ -68,8 +47,9 @@ lint-mypy:
 .PHONY: lint-python
 lint-python: lint-black lint-flake8 lint-isort lint-mypy
 
-.PHONY: lint
-lint: lint-python
+
+.PHONY: fmt
+fmt: fmt-black fmt-isort
 
 .PHONY: fmt-black
 fmt-black:
@@ -79,8 +59,6 @@ fmt-black:
 fmt-isort:
 	$(POETRY) run isort .
 
-.PHONY: fmt
-fmt: fmt-black fmt-isort
 
 .PHONY: test
 test:

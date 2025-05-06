@@ -372,10 +372,6 @@ Use the Makefile to create a new Poetry virtual environment for the
 project and install the project's package dependencies into it,
 using the following command.
 
-    $ make install-packages
-
-It's also possible to also install the project in 'editable mode'.
-
     $ make install
 
 Please note, if you create the virtual environment in this way, and then try to
@@ -409,7 +405,7 @@ You can reformat the code using the following command.
 
 Tests belong in `./tests`. Code-under-test belongs in `./eventsourcing_eventstoredb`.
 
-Edit package dependencies in `pyproject.toml`. Update installed packages (and the
-`poetry.lock` file) using the following command.
+Edit package dependencies in `pyproject.toml`. Update `poetry.lock` and installed packages
+using the following command.
 
-    $ make update-packages
+    $ make update
