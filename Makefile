@@ -1,7 +1,8 @@
 .EXPORT_ALL_VARIABLES:
 
 # EVENTSTORE_DOCKER_IMAGE ?= eventstore/eventstore:23.10.0-bookworm-slim
-EVENTSTORE_DOCKER_IMAGE ?= docker.eventstore.com/eventstore/eventstoredb-ee:24.10.0-x64-8.0-bookworm-slim
+#EVENTSTORE_DOCKER_IMAGE ?= docker.eventstore.com/eventstore/eventstoredb-ee:24.10.0-x64-8.0-bookworm-slim
+EVENTSTORE_DOCKER_IMAGE ?= docker.eventstore.com/kurrent-latest/kurrentdb:25.0.0-x64-8.0-bookworm-slim
 
 PYTHONUNBUFFERED=1
 
@@ -82,7 +83,9 @@ publish:
 .PHONY: start-eventstoredb-insecure
 start-eventstoredb-insecure:
 	docker run -d -i -t -p 2113:2113 \
+    --env "EVENTSTORE_ALLOW_UNKNOWN_OPTIONS=true" \
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
+    --env "EVENTSTORE_ADVERTISE_HOST_PORT_TO_CLIENT_AS=2113" \
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2113" \
     --name my-eventstoredb-insecure \
     $(EVENTSTORE_DOCKER_IMAGE) \
@@ -93,7 +96,9 @@ start-eventstoredb-insecure:
 start-eventstoredb-secure:
 	docker run -d -i -t -p 2114:2113 \
     --env "HOME=/tmp" \
+    --env "EVENTSTORE_ALLOW_UNKNOWN_OPTIONS=true" \
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
+    --env "EVENTSTORE_ADVERTISE_HOST_PORT_TO_CLIENT_AS=2114" \
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2114" \
     --name my-eventstoredb-secure \
     $(EVENTSTORE_DOCKER_IMAGE) \
