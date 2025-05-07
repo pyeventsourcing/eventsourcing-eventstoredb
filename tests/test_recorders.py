@@ -410,11 +410,31 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(stored_events2[0].originator_version, self.INITIAL_VERSION)
 
         # InvalidPosition error when selecting from max_notification_id1 + 1.
-        with self.assertRaises(kurrentdbclient.exceptions.UnknownError) as cm:
+        with self.assertRaises(kurrentdbclient.exceptions.UnknownError):  # as cm:
             recorder.select_notifications(
                 max_notification_id1 + 1, 10, inclusive_of_start=False
             )
-        self.assertIn("InvalidPosition", str(cm.exception))
+        # self.assertIn("InvalidPosition", str(cm.exception))
+
+        # From docker.eventstore.com/eventstore-ce/eventstoredb-ce:22.10.4-jammy
+        # <_MultiThreadedRendezvous of RPC that terminated with:
+        # 	status = StatusCode.UNKNOWN
+        # 	details = "Unexpected FilteredReadAllResult: Error"
+        # 	debug_error_string = "UNKNOWN:Error received from peer  {created_time:
+        # 	"2025-05-07T01:05:37.567805+01:00", grpc_status:2, grpc_message:
+        # 	"Unexpected FilteredReadAllResult: Error"}"
+        # >
+
+        # From docker.eventstore.com/eventstore/eventstoredb-ee:
+        #   24.10.0-x64-8.0-bookworm-slim
+
+        # <_MultiThreadedRendezvous of RPC that terminated with:
+        # 	status = StatusCode.UNKNOWN
+        # 	details = "Unexpected FilteredReadAllResult: InvalidPosition"
+        # 	debug_error_string = "UNKNOWN:Error received from peer  {created_time:
+        # 	"2025-05-07T01:00:12.828196+01:00", grpc_status:2, grpc_message:
+        # 	"Unexpected FilteredReadAllResult: InvalidPosition"}"
+        # >
 
         notifications = recorder.select_notifications(
             max_notification_id1, 10, inclusive_of_start=False
@@ -499,9 +519,14 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(notifications[1].originator_version, self.INITIAL_VERSION)
 
         # Select a limited number of notifications from initial position.
+        print("max_notification_id1:", max_notification_id1)
         notifications = recorder.select_notifications(
-            max_notification_id1, 1, inclusive_of_start=False
+            start=max_notification_id1,
+            limit=1,
+            inclusive_of_start=False,
         )
+        for notification in notifications:
+            print("notification:", notification)
         self.assertEqual(len(notifications), 1)
         self.assertEqual(notifications[0].originator_id, originator_id1)
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
