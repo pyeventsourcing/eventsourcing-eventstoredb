@@ -3,13 +3,13 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project]
-name = "eventsourcing-eventstoredb"
+name = "eventsourcing-kurrentdb"
 version = "1.2.0"
 dependencies = [
   "eventsourcing>=9.4.2,<10.0",
   "kurrentdbclient>=1.0.2,<2.0",
 ]
-description = "Python package for eventsourcing with EventStoreDB and KurrentDB"
+description = "Python package for eventsourcing with KurrentDB"
 license = { text = "BSD-3-Clause" }
 readme = "README.md"
 requires-python = ">=3.9.2"
@@ -33,11 +33,11 @@ classifiers = [
 ]
 
 [project.urls]
-homepage = "https://github.com/pyeventsourcing/eventsourcing-eventstoredb"
-repository = "https://github.com/pyeventsourcing/eventsourcing-eventstoredb"
+homepage = "https://github.com/pyeventsourcing/eventsourcing-kurrentdb"
+repository = "https://github.com/pyeventsourcing/eventsourcing-kurrentdb"
 
 [tool.poetry]
-include = ["eventsourcing_eventstoredb/py.typed"]
+include = ["eventsourcing_kurrentdb/py.typed"]
 
 [tool.poetry.group.dev.dependencies]
 black = { version = "*", allow-prereleases = true }
@@ -73,7 +73,7 @@ exclude = '''
 [tool.coverage.run]
 branch = true
 source = [
-    "eventsourcing_eventstoredb"
+    "eventsourcing_kurrentdb"
 ]
 relative_files = true
 omit = [
@@ -203,7 +203,7 @@ max-args = 10
 
 [tool.pyright]
 include = [
-    "eventsourcing_eventstoredb",
+    "eventsourcing_kurrentdb",
     "tests",
 ]
 pythonVersion = "3.9"

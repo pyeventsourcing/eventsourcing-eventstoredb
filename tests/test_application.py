@@ -21,23 +21,23 @@ from eventsourcing.utils import get_topic
 from tests.common import INSECURE_CONNECTION_STRING
 
 
-class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
+class TestApplicationWithKurrentDB(ExampleApplicationTestCase):
     timeit_number = 30 * TIMEIT_FACTOR
-    expected_factory_topic = "eventsourcing_eventstoredb.factory:EventStoreDBFactory"
+    expected_factory_topic = "eventsourcing_kurrentdb.factory:KurrentDBFactory"
 
     def setUp(self) -> None:
         self.original_initial_version = Aggregate.INITIAL_VERSION
         Aggregate.INITIAL_VERSION = 0
         super().setUp()
-        os.environ["PERSISTENCE_MODULE"] = "eventsourcing_eventstoredb"
-        os.environ["EVENTSTOREDB_URI"] = INSECURE_CONNECTION_STRING
+        os.environ["PERSISTENCE_MODULE"] = "eventsourcing_kurrentdb"
+        os.environ["KURRENTDB_URI"] = INSECURE_CONNECTION_STRING
 
     def tearDown(self) -> None:
         Aggregate.INITIAL_VERSION = self.original_initial_version
         with contextlib.suppress(KeyError):
             del os.environ["PERSISTENCE_MODULE"]
         with contextlib.suppress(KeyError):
-            del os.environ["EVENTSTOREDB_URI"]
+            del os.environ["KURRENTDB_URI"]
         super().tearDown()
 
     def test_example_application(self) -> None:
@@ -333,13 +333,13 @@ class TestApplicationWithEventStoreDB(ExampleApplicationTestCase):
         self.assertEqual(events[1].name, "name2")
 
     def test_construct_without_uri(self) -> None:
-        del os.environ["EVENTSTOREDB_URI"]
+        del os.environ["KURRENTDB_URI"]
         with self.assertRaises(InfrastructureFactoryError) as cm:
             BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
-        self.assertIn("EVENTSTOREDB_URI", str(cm.exception))
+        self.assertIn("KURRENTDB_URI", str(cm.exception))
 
     def test_construct_secure_without_root_certificates(self) -> None:
-        os.environ["EVENTSTOREDB_URI"] = "esdb://admin:changeit@localhost"
+        os.environ["KURRENTDB_URI"] = "esdb://admin:changeit@localhost"
         app = BankAccounts(env={"IS_SNAPSHOTTING_ENABLED": "y"})
         with self.assertRaises(PersistenceError) as cm:
             app.open_account(full_name="Bob", email_address="bob@example.com")

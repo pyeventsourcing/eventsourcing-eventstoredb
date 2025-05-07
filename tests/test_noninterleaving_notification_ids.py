@@ -2,7 +2,7 @@ from eventsourcing.persistence import ApplicationRecorder
 from eventsourcing.tests.persistence import NonInterleavingNotificationIDsBaseCase
 from kurrentdbclient import KurrentDBClient
 
-from eventsourcing_eventstoredb.recorders import EventStoreDBApplicationRecorder
+from eventsourcing_kurrentdb.recorders import KurrentDBApplicationRecorder
 from tests.common import INSECURE_CONNECTION_STRING
 
 
@@ -17,7 +17,7 @@ class TestNonInterleaving(NonInterleavingNotificationIDsBaseCase):
         del self.client
 
     def create_recorder(self) -> ApplicationRecorder:
-        return EventStoreDBApplicationRecorder(client=self.client)
+        return KurrentDBApplicationRecorder(client=self.client)
 
 
 del NonInterleavingNotificationIDsBaseCase

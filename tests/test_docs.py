@@ -17,9 +17,9 @@ class TestDocs(TestCase):
     def tearDown(self) -> None:
         clear_topic_cache()
         with contextlib.suppress(KeyError):
-            del os.environ["EVENTSTOREDB_URI"]
+            del os.environ["KURRENTDB_URI"]
         with contextlib.suppress(KeyError):
-            del os.environ["EVENTSTOREDB_ROOT_CERTIFICATES"]
+            del os.environ["KURRENTDB_ROOT_CERTIFICATES"]
 
     def test_readme(self) -> None:
         self._out = ""
@@ -180,16 +180,16 @@ class TestDocsSecure(TestDocs):
         super().substitute_lines(lines)
         for i in range(len(lines)):
             line = lines[i]
-            if line.startswith("os.environ['EVENTSTOREDB_URI']"):
+            if line.startswith("os.environ['KURRENTDB_URI']"):
                 line = (
-                    "os.environ['EVENTSTOREDB_URI'] ="
+                    "os.environ['KURRENTDB_URI'] ="
                     " 'esdb://admin:changeit@localhost:2114'"
                 )
-            elif line.startswith("os.environ['EVENTSTOREDB_ROOT_CERTIFICATES']"):
+            elif line.startswith("os.environ['KURRENTDB_ROOT_CERTIFICATES']"):
                 root_certificates = ssl.get_server_certificate(addr=("localhost", 2114))
                 root_certificates = "\\n".join(root_certificates.split("\n"))
                 line = (
-                    f"os.environ['EVENTSTOREDB_ROOT_CERTIFICATES']"
+                    f"os.environ['KURRENTDB_ROOT_CERTIFICATES']"
                     f" = '{root_certificates}'"
                 )
             lines[i] = line

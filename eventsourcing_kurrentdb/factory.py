@@ -12,47 +12,47 @@ from eventsourcing.persistence import (
 )
 from kurrentdbclient import KurrentDBClient
 
-from eventsourcing_eventstoredb.recorders import (
-    EventStoreDBAggregateRecorder,
-    EventStoreDBApplicationRecorder,
+from eventsourcing_kurrentdb.recorders import (
+    KurrentDBAggregateRecorder,
+    KurrentDBApplicationRecorder,
 )
 
 if TYPE_CHECKING:
     from eventsourcing.utils import Environment
 
 
-class EventStoreDBFactory(InfrastructureFactory[TrackingRecorder]):
+class KurrentDBFactory(InfrastructureFactory[TrackingRecorder]):
     """
-    Infrastructure factory for EventStoreDB infrastructure.
+    Infrastructure factory for KurrentDB infrastructure.
     """
 
-    EVENTSTOREDB_URI = "EVENTSTOREDB_URI"
-    EVENTSTOREDB_ROOT_CERTIFICATES = "EVENTSTOREDB_ROOT_CERTIFICATES"
+    KURRENTDB_URI = "KURRENTDB_URI"
+    KURRENTDB_ROOT_CERTIFICATES = "KURRENTDB_ROOT_CERTIFICATES"
 
     def __init__(self, env: Environment):
         super().__init__(env)
-        eventstoredb_uri = self.env.get(self.EVENTSTOREDB_URI)
+        eventstoredb_uri = self.env.get(self.KURRENTDB_URI)
         if eventstoredb_uri is None:
             msg = (
-                f"{self.EVENTSTOREDB_URI!r} not found "
+                f"{self.KURRENTDB_URI!r} not found "
                 "in environment with keys: "
-                f"{', '.join(self.env.create_keys(self.EVENTSTOREDB_URI))!r}"
+                f"{', '.join(self.env.create_keys(self.KURRENTDB_URI))!r}"
             )
             raise InfrastructureFactoryError(msg)
-        root_certificates = self.env.get(self.EVENTSTOREDB_ROOT_CERTIFICATES)
+        root_certificates = self.env.get(self.KURRENTDB_ROOT_CERTIFICATES)
         self.client = KurrentDBClient(
             uri=eventstoredb_uri,
             root_certificates=root_certificates,
         )
 
     def aggregate_recorder(self, purpose: str = "events") -> AggregateRecorder:
-        return EventStoreDBAggregateRecorder(
+        return KurrentDBAggregateRecorder(
             client=self.client,
             for_snapshotting=bool(purpose == "snapshots"),
         )
 
     def application_recorder(self) -> ApplicationRecorder:
-        return EventStoreDBApplicationRecorder(self.client)
+        return KurrentDBApplicationRecorder(self.client)
 
     def tracking_recorder(
         self, tracking_recorder_class: type[TrackingRecorder] | None = None

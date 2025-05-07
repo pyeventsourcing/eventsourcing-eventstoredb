@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-class EventStoreDBAggregateRecorder(AggregateRecorder):
+class KurrentDBAggregateRecorder(AggregateRecorder):
     SNAPSHOT_STREAM_PREFIX = "snapshot-$"
 
     def __init__(
@@ -74,9 +74,7 @@ class EventStoreDBAggregateRecorder(AggregateRecorder):
             if len(set_of_originator_ids) == 0:
                 return []
             if len(set_of_originator_ids) > 1:
-                msg = (
-                    "EventStoreDB can't atomically store events in more than one stream"
-                )
+                msg = "KurrentDB can't atomically store events in more than one stream"
                 raise ProgrammingError(msg)
 
             # Make sure stored events have a gapless sequence of originator_versions.
@@ -227,9 +225,7 @@ def _construct_notification(recorded_event: RecordedEvent) -> Notification:
     )
 
 
-class EventStoreDBApplicationRecorder(
-    EventStoreDBAggregateRecorder, ApplicationRecorder
-):
+class KurrentDBApplicationRecorder(KurrentDBAggregateRecorder, ApplicationRecorder):
     def insert_events(
         self, stored_events: list[StoredEvent], **kwargs: Any
     ) -> Sequence[int] | None:
@@ -288,13 +284,13 @@ class EventStoreDBApplicationRecorder(
     def subscribe(
         self, gt: int | None = None, topics: Sequence[str] = ()
     ) -> Subscription[ApplicationRecorder]:
-        return EventStoreDBSubscription(recorder=self, gt=gt, topics=topics)
+        return KurrentDBSubscription(recorder=self, gt=gt, topics=topics)
 
 
-class EventStoreDBSubscription(Subscription[EventStoreDBApplicationRecorder]):
+class KurrentDBSubscription(Subscription[KurrentDBApplicationRecorder]):
     def __init__(
         self,
-        recorder: EventStoreDBApplicationRecorder,
+        recorder: KurrentDBApplicationRecorder,
         gt: int | None = None,
         topics: Sequence[str] = (),
     ):

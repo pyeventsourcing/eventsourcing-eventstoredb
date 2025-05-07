@@ -1,28 +1,28 @@
-Please note: following the rebranding of EventStoreDB to KurrentDB, this package has
-been rebranded as [`eventsourcing-kurrentdb`](https://pypi.org/project/eventsourcing-kurrentdb). Please
+Please note: following the rebranding of EventStoreDB to KurrentDB, this package is
+the rebranding of [`eventsourcing-eventstoredb`](https://pypi.org/project/eventsourcing-eventstoredb). Please
 migrate your code to use the [`eventsourcing-kurrentdb`](https://pypi.org/project/eventsourcing-kurrentdb)
 package when you are ready.
 
 # Event Sourcing in Python with KurrentDB
 
 This is an extension package for the Python [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
-that provides a persistence module for [EventStoreDB and KurrentDB](https://www.kurrent.io).
+that provides a persistence module for [KurrentDB](https://www.kurrent.io).
 It uses the [kurrentdbclient](https://github.com/pyeventsourcing/kurrentdbclient)
-package to communicate with EventStoreDB and KurrentDB via the gRPC interface.
+package to communicate with KurrentDB via the gRPC interface.
 
 ## Installation
 
-Use pip to install the [stable distribution](https://pypi.org/project/eventsourcing-eventstoredb/)
+Use pip to install the [stable distribution](https://pypi.org/project/eventsourcing-kurrentdb/)
 from the Python Package Index.
 
-    $ pip install eventsourcing-eventstoredb
+    $ pip install eventsourcing-kurrentdb
 
 Please note, it is recommended to install Python packages into a Python virtual environment.
 
 ## Getting started
 
 Define aggregates and applications in the usual way. Please note, "streams"
-in EventStoreDB and KurrentDB are constrained to start from position `0`, and this
+in KurrentDB are constrained to start from position `0`, and this
 package expects the `originator_version` of the first event in an aggregate sequence
 to be `0`, so you must set `INITIAL_VERSION` on your aggregate classes to `0`.
 
@@ -58,7 +58,7 @@ class TrainingSchool(Application):
 
 
 class Dog(Aggregate):
-    INITIAL_VERSION = 0  # for EventStoreDB and KurrentDB
+    INITIAL_VERSION = 0  # for KurrentDB
 
     @staticmethod
     def create_id(name: str):
@@ -79,43 +79,43 @@ class DogDetails(TypedDict):
     tricks: Tuple[str, ...]
 ```
 
-Configure the `TrainingSchool` application to use EventStoreDB or KurrentDB by setting
-the environment variable `PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. You
+Configure the `TrainingSchool` application to use KurrentDB by setting
+the environment variable `PERSISTENCE_MODULE` to `'eventsourcing_kurrentdb'`. You
 can do this in actual environment variables, or by passing in an `env` argument when
 constructing  the application object, or by setting `env` on the application class.
 
 ```python
 import os
 
-os.environ['TRAININGSCHOOL_PERSISTENCE_MODULE'] = 'eventsourcing_eventstoredb'
+os.environ['TRAININGSCHOOL_PERSISTENCE_MODULE'] = 'eventsourcing_kurrentdb'
 ```
 
-Also set environment variable `EVENTSTOREDB_URI` to an EventStoreDB
-or KurrentDB connection string URI. This value will be used as the `uri`
-argument when the `KurrentDBClient` class is constructed by this package.
+Also set environment variable `KURRENTDB_URI` to an KurrentDB connection
+string URI. This value will be used as the `uri` argument when the `KurrentDBClient`
+class is constructed by this package.
 
 ```python
-os.environ['EVENTSTOREDB_URI'] = 'esdb://localhost:2113?Tls=false'
+os.environ['KURRENTDB_URI'] = 'esdb://localhost:2113?Tls=false'
 ```
 
-If you are connecting to a "secure" EventStoreDB or KurrentDB server, unless
+If you are connecting to a "secure" KurrentDB server, unless
 the root certificate of the certificate authority used to generate the
 server's certificate is installed locally, then also set environment
-variable `EVENTSTOREDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
-suitable for making a secure gRPC connection to the EventStoreDB server(s).
+variable `KURRENTDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
+suitable for making a secure gRPC connection to the KurrentDB server(s).
 This value will be used as the `root_certificates` argument when the
 `KurrentDBClient` class is constructed by this package.
 
 
 ```python
-os.environ['EVENTSTOREDB_ROOT_CERTIFICATES'] = '<PEM encoded SSL/TLS root certificates>'
+os.environ['KURRENTDB_ROOT_CERTIFICATES'] = '<PEM encoded SSL/TLS root certificates>'
 ```
 
 Please refer to the [kurrentdbclient](https://github.com/pyeventsourcing/kurrentdbclient)
-documentation for details about starting a "secure" or "insecure" EventStoreDB
-server, and the "esdb" and "esdb+discover" EventStoreDB connection string
+documentation for details about starting a "secure" or "insecure" KurrentDB
+server, and the "kdb" and "kdb+discover" KurrentDB connection string
 URI schemes, and how to obtain a suitable SSL/TLS certificate for use
-in the client when connecting to a "secure" EventStoreDB server.
+in the client when connecting to a "secure" KurrentDB server.
 
 Construct the application.
 
@@ -357,10 +357,6 @@ from the [Python website](https://www.python.org/downloads/).
 Once project dependencies have been installed, you should be able to run tests
 from within PyCharm (right-click on the `tests` folder and select the 'Run' option).
 
-Because of a conflict between pytest and PyCharm's debugger and the coverage tool,
-you may need to add ``--no-cov`` as an option to the test runner template. Alternatively,
-just use the Python Standard Library's ``unittest`` module.
-
 You should also be able to open a terminal window in PyCharm, and run the project's
 Makefile commands from the command line (see below).
 
@@ -387,17 +383,17 @@ and creating the Poetry virtual environment using PyCharm (see above).
 
 ### Project Makefile commands
 
-You can start EventStoreDB using the following command.
+You can start KurrentDB using the following command.
 
-    $ make start-eventstoredb
+    $ make start-kurrentdb
 
-You can run tests using the following command (needs EventStoreDB to be running).
+You can run tests using the following command (needs KurrentDB to be running).
 
     $ make test
 
-You can stop EventStoreDB using the following command.
+You can stop KurrentDB using the following command.
 
-    $ make stop-eventstoredb
+    $ make stop-kurrentdb
 
 You can check the formatting of the code using the following command.
 
@@ -407,7 +403,7 @@ You can reformat the code using the following command.
 
     $ make fmt
 
-Tests belong in `./tests`. Code-under-test belongs in `./eventsourcing_eventstoredb`.
+Tests belong in `./tests`. Code-under-test belongs in `./eventsourcing_kurrentdb`.
 
 Edit package dependencies in `pyproject.toml`. Update `poetry.lock` and installed packages
 using the following command.

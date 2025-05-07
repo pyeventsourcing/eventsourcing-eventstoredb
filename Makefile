@@ -1,8 +1,8 @@
 .EXPORT_ALL_VARIABLES:
 
-# EVENTSTORE_DOCKER_IMAGE ?= eventstore/eventstore:23.10.0-bookworm-slim
-#EVENTSTORE_DOCKER_IMAGE ?= docker.eventstore.com/eventstore/eventstoredb-ee:24.10.0-x64-8.0-bookworm-slim
-EVENTSTORE_DOCKER_IMAGE ?= docker.eventstore.com/kurrent-latest/kurrentdb:25.0.0-x64-8.0-bookworm-slim
+# DOCKER_IMAGE ?= eventstore/eventstore:23.10.0-bookworm-slim
+#DOCKER_IMAGE ?= docker.eventstore.com/eventstore/eventstoredb-ee:24.10.0-x64-8.0-bookworm-slim
+DOCKER_IMAGE ?= docker.eventstore.com/kurrent-latest/kurrentdb:25.0.0-x64-8.0-bookworm-slim
 
 PYTHONUNBUFFERED=1
 
@@ -80,55 +80,55 @@ build:
 publish:
 	$(POETRY) publish
 
-.PHONY: start-eventstoredb-insecure
-start-eventstoredb-insecure:
+.PHONY: start-kurrentdb-insecure
+start-kurrentdb-insecure:
 	docker run -d -i -t -p 2113:2113 \
     --env "EVENTSTORE_ALLOW_UNKNOWN_OPTIONS=true" \
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
     --env "EVENTSTORE_ADVERTISE_HOST_PORT_TO_CLIENT_AS=2113" \
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2113" \
-    --name my-eventstoredb-insecure \
-    $(EVENTSTORE_DOCKER_IMAGE) \
+    --name my-kurrentdb-insecure \
+    $(DOCKER_IMAGE) \
     --insecure \
     --enable-atom-pub-over-http
 
-.PHONY: start-eventstoredb-secure
-start-eventstoredb-secure:
+.PHONY: start-kurrentdb-secure
+start-kurrentdb-secure:
 	docker run -d -i -t -p 2114:2113 \
     --env "HOME=/tmp" \
     --env "EVENTSTORE_ALLOW_UNKNOWN_OPTIONS=true" \
     --env "EVENTSTORE_ADVERTISE_HOST_TO_CLIENT_AS=localhost" \
     --env "EVENTSTORE_ADVERTISE_HOST_PORT_TO_CLIENT_AS=2114" \
     --env "EVENTSTORE_ADVERTISE_HTTP_PORT_TO_CLIENT_AS=2114" \
-    --name my-eventstoredb-secure \
-    $(EVENTSTORE_DOCKER_IMAGE) \
+    --name my-kurrentdb-secure \
+    $(DOCKER_IMAGE) \
     --dev
 
-.PHONY: attach-eventstoredb-insecure
-attach-eventstoredb-insecure:
-	docker exec -it my-eventstoredb-insecure /bin/bash
+.PHONY: attach-kurrentdb-insecure
+attach-kurrentdb-insecure:
+	docker exec -it my-kurrentdb-insecure /bin/bash
 
-.PHONY: attach-eventstoredb-secure
-attach-eventstoredb-secure:
-	docker exec -it my-eventstoredb-secure /bin/bash
+.PHONY: attach-kurrentdb-secure
+attach-kurrentdb-secure:
+	docker exec -it my-kurrentdb-secure /bin/bash
 
-.PHONY: stop-eventstoredb-insecure
-stop-eventstoredb-insecure:
-	docker stop my-eventstoredb-insecure
-	docker rm my-eventstoredb-insecure
+.PHONY: stop-kurrentdb-insecure
+stop-kurrentdb-insecure:
+	docker stop my-kurrentdb-insecure
+	docker rm my-kurrentdb-insecure
 
-.PHONY: stop-eventstoredb-secure
-stop-eventstoredb-secure:
-	docker stop my-eventstoredb-secure
-	docker rm my-eventstoredb-secure
+.PHONY: stop-kurrentdb-secure
+stop-kurrentdb-secure:
+	docker stop my-kurrentdb-secure
+	docker rm my-kurrentdb-secure
 
-.PHONY: start-eventstoredb
-start-eventstoredb: start-eventstoredb-insecure start-eventstoredb-secure
+.PHONY: start-kurrentdb
+start-kurrentdb: start-kurrentdb-insecure start-kurrentdb-secure
 	@echo "Waiting for containers to be healthy"
-	@until docker ps | grep "my-eventstoredb" | grep -in "healthy" | wc -l | grep -in 2 > /dev/null; do printf "." && sleep 1; done; echo ""
+	@until docker ps | grep "my-kurrentdb" | grep -in "healthy" | wc -l | grep -in 2 > /dev/null; do printf "." && sleep 1; done; echo ""
 	@docker ps
 	@sleep 15
 
 
-.PHONY: stop-eventstoredb
-stop-eventstoredb: stop-eventstoredb-insecure stop-eventstoredb-secure
+.PHONY: stop-kurrentdb
+stop-kurrentdb: stop-kurrentdb-insecure stop-kurrentdb-secure

@@ -11,13 +11,13 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        eventstore-docker-image:
+        docker-image:
             - docker.eventstore.com/eventstore-ce/eventstoredb-ce:22.10.4-jammy
             - docker.eventstore.com/eventstore-ce/eventstoredb-oss:23.10.2-jammy
             - docker.eventstore.com/eventstore/eventstoredb-ee:24.10.0-x64-8.0-bookworm-slim
             - docker.eventstore.com/kurrent-latest/kurrentdb:25.0.0-x64-8.0-bookworm-slim
     env:
-      EVENTSTORE_DOCKER_IMAGE: ${{ matrix.eventstore-docker-image }}
+      DOCKER_IMAGE: ${{ matrix.docker-image }}
     runs-on: "ubuntu-22.04"
     steps:
       - uses: actions/checkout@v3
@@ -28,8 +28,8 @@ jobs:
         run: make install-poetry
       - name: Install packages
         run: make install
-      - name: Start EventStoreDB
-        run: make start-eventstoredb
+      - name: Start KurrentDB
+        run: make start-kurrentdb
       - name: Lint
         run: make lint
       - name: Test

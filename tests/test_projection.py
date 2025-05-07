@@ -42,7 +42,7 @@ class TrainingSchool(Application):
 
 
 class Dog(Aggregate):
-    INITIAL_VERSION = 0  # for EventStoreDB
+    INITIAL_VERSION = 0  # for KurrentDB
 
     @dataclass(frozen=True)
     class Registered(Aggregate.Created):
@@ -137,8 +137,8 @@ class CountProjection(Projection[CounterViewInterface]):
 class TestProjection(TestCase):
     def test_projection(self) -> None:
         env = {
-            "TRAININGSCHOOL_PERSISTENCE_MODULE": "eventsourcing_eventstoredb",
-            "TRAININGSCHOOL_EVENTSTOREDB_URI": INSECURE_CONNECTION_STRING,
+            "TRAININGSCHOOL_PERSISTENCE_MODULE": "eventsourcing_kurrentdb",
+            "TRAININGSCHOOL_KURRENTDB_URI": INSECURE_CONNECTION_STRING,
         }
         training_school = TrainingSchool(env=env)
 

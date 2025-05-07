@@ -19,21 +19,21 @@ from eventsourcing.tests.persistence import (
 )
 from kurrentdbclient import KurrentDBClient, NewEvent, StreamState
 
-from eventsourcing_eventstoredb.recorders import (
-    EventStoreDBAggregateRecorder,
-    EventStoreDBApplicationRecorder,
+from eventsourcing_kurrentdb.recorders import (
+    KurrentDBAggregateRecorder,
+    KurrentDBApplicationRecorder,
 )
 from tests.common import INSECURE_CONNECTION_STRING
 
 
-class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
+class TestKurrentDBAggregateRecorder(AggregateRecorderTestCase):
     INITIAL_VERSION = 0
 
     def setUp(self) -> None:
         self.client = KurrentDBClient(INSECURE_CONNECTION_STRING)
 
     def create_recorder(self) -> AggregateRecorder:
-        return EventStoreDBAggregateRecorder(client=self.client)
+        return KurrentDBAggregateRecorder(client=self.client)
 
     def test_insert_and_select(self) -> None:
         super().test_insert_and_select()
@@ -273,7 +273,7 @@ class TestEventStoreDBAggregateRecorder(AggregateRecorderTestCase):
             recorder.insert_events([stored_event4, stored_event5])
 
 
-class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
+class TestKurrentDBApplicationRecorder(ApplicationRecorderTestCase):
     INITIAL_VERSION = 0
     EXPECT_CONTIGUOUS_NOTIFICATION_IDS = False
 
@@ -287,7 +287,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         # Aggregate.INITIAL_VERSION = self.original_initial_version
 
     def create_recorder(self) -> ApplicationRecorder:
-        return EventStoreDBApplicationRecorder(client=self.client)
+        return KurrentDBApplicationRecorder(client=self.client)
 
     def test_insert_select(self) -> None:
         # super().test_insert_select()
@@ -565,7 +565,7 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         max_notification_id4 = recorder.max_notification_id()
         assert isinstance(max_notification_id4, int)
 
-        cast(EventStoreDBApplicationRecorder, recorder).client.append_to_stream(
+        cast(KurrentDBApplicationRecorder, recorder).client.append_to_stream(
             stream_name=f"not-a-uuid-{uuid4()}",
             events=NewEvent(type="SomethingHappened", data=b"{}"),
             current_version=StreamState.NO_STREAM,
@@ -580,10 +580,10 @@ class TestEventStoreDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertIn("badly formed hexadecimal UUID string", str(cm1.exception))
 
         # Cover non-wrong-current-version exception handling when appending events.
-        cast(EventStoreDBApplicationRecorder, recorder).client.close()
-        cast(
-            EventStoreDBApplicationRecorder, recorder
-        ).client.connection_spec._targets = ["127.0.0.1:1000"]
+        cast(KurrentDBApplicationRecorder, recorder).client.close()
+        cast(KurrentDBApplicationRecorder, recorder).client.connection_spec._targets = [
+            "127.0.0.1:1000"
+        ]
         with self.assertRaises(PersistenceError) as cm2:
             recorder.insert_events([stored_event3])
         self.assertIn("failed to connect", str(cm2.exception))
