@@ -90,7 +90,7 @@ import os
 os.environ['TRAININGSCHOOL_PERSISTENCE_MODULE'] = 'eventsourcing_kurrentdb'
 ```
 
-Also set environment variable `KURRENTDB_URI` to an KurrentDB connection
+Also set environment variable `KURRENTDB_URI` to a KurrentDB connection
 string URI. This value will be used as the `uri` argument when the `KurrentDBClient`
 class is constructed by this package.
 
