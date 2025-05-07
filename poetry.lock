@@ -322,14 +322,14 @@ plugins = ["setuptools"]
 
 [[package]]
 name = "kurrentdbclient"
-version = "1.0.2"
+version = "1.0.3"
 description = "Python gRPC Client for KurrentDB"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "kurrentdbclient-1.0.2-py3-none-any.whl", hash = "sha256:483b0d73793206832087db8895259de7858544bcdd4f67a0f3109f82d4763430"},
-    {file = "kurrentdbclient-1.0.2.tar.gz", hash = "sha256:8b7cd92ccea3c24a800ee139d9302cdd7e064f51b1e2990df181d45694810de4"},
+    {file = "kurrentdbclient-1.0.3-py3-none-any.whl", hash = "sha256:93e1593c2884ae44c2eb565ab1f582f80a3d191634b613a7ec53e1f94d5fb4a8"},
+    {file = "kurrentdbclient-1.0.3.tar.gz", hash = "sha256:63aafef4045c9058f7c0445420ef37a88bfe2a4c18e1a0373b80c91ff46c4057"},
 ]
 
 [package.dependencies]
