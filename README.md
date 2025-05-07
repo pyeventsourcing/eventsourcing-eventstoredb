@@ -1,4 +1,9 @@
-# Event Sourcing in Python with EventStoreDB and KurrentDB
+Please note: following the rebranding of EventStoreDB to KurrentDB, this package has
+been rebranded as [`eventsourcing-kurrentdb`](https://pypi.org/project/eventsourcing-kurrentdb). Please
+migrate your code to use the [`eventsourcing-kurrentdb`](https://pypi.org/project/eventsourcing-kurrentdb)
+package when you are ready.
+
+# Event Sourcing in Python with KurrentDB
 
 This is an extension package for the Python [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
 that provides a persistence module for [EventStoreDB and KurrentDB](https://www.kurrent.io).
