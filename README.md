@@ -6,9 +6,11 @@ package when you are ready.
 # Event Sourcing in Python with KurrentDB
 
 This is an extension package for the Python [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
-that provides a persistence module for [KurrentDB](https://www.kurrent.io).
+that provides a persistence module for [KurrentDB and EventStoreDB](https://www.kurrent.io).
 It uses the [kurrentdbclient](https://github.com/pyeventsourcing/kurrentdbclient)
-package to communicate with KurrentDB via the gRPC interface.
+package to communicate with KurrentDB via the gRPC interface. It is tested with
+KurrentDB 25.0 and three previous LTS versions of EventStoreDB (24.10, 23.10, and 22.10)
+across Python versions 3.9 to 3.13.
 
 ## Installation
 
@@ -29,8 +31,8 @@ to be `0`, so you must set `INITIAL_VERSION` on your aggregate classes to `0`.
 ```python
 from __future__ import annotations
 
-from uuid import uuid5, NAMESPACE_URL
-from typing import List, TypedDict, Tuple
+from typing import TypedDict
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from eventsourcing.application import Application
 from eventsourcing.domain import Aggregate, event
@@ -50,65 +52,60 @@ class TrainingSchool(Application):
 
     def get_dog_details(self, name: str) -> DogDetails:
         dog = self._get_dog(name)
-        return {'name': dog.name, 'tricks': tuple(dog.tricks)}
+        return {"name": dog.name, "tricks": tuple(dog.tricks)}
 
     def _get_dog(self, name: str) -> Dog:
         return self.repository.get(Dog.create_id(name))
-
 
 
 class Dog(Aggregate):
     INITIAL_VERSION = 0  # for KurrentDB
 
     @staticmethod
-    def create_id(name: str):
+    def create_id(name: str) -> UUID:
         return uuid5(NAMESPACE_URL, f"/dogs/{name}")
 
-    @event('Registered')
-    def __init__(self, name):
+    @event("Registered")
+    def __init__(self, name: str) -> None:
         self.name = name
-        self.tricks: List[str] = []
+        self.tricks: list[str] = []
 
-    @event('TrickAdded')
-    def add_trick(self, trick):
+    @event("TrickAdded")
+    def add_trick(self, trick: str) -> None:
         self.tricks.append(trick)
 
 
 class DogDetails(TypedDict):
     name: str
-    tricks: Tuple[str, ...]
+    tricks: tuple[str, ...]
 ```
 
-Configure the `TrainingSchool` application to use KurrentDB by setting
-the environment variable `PERSISTENCE_MODULE` to `'eventsourcing_kurrentdb'`. You
-can do this in actual environment variables, or by passing in an `env` argument when
-constructing  the application object, or by setting `env` on the application class.
+Configure the `TrainingSchool` application to use KurrentDB with environment variables.
+You can configure an application with environment variables by setting them in the
+operating system environment, or by using the application constructor argument `env`,
+or by setting the application class attribute `env`.
+
+Set `PERSISTENCE_MODULE` to `'eventsourcing_kurrentdb'`. Also set `KURRENTDB_URI` to a
+KurrentDB connection  string URI. This value will be used as the `uri` argument when
+the `KurrentDBClient` class is constructed by this package.
 
 ```python
 import os
 
-os.environ['TRAININGSCHOOL_PERSISTENCE_MODULE'] = 'eventsourcing_kurrentdb'
+os.environ["TRAININGSCHOOL_PERSISTENCE_MODULE"] = "eventsourcing_kurrentdb"
+os.environ["KURRENTDB_URI"] = "esdb://localhost:2113?Tls=false"
 ```
 
-Also set environment variable `KURRENTDB_URI` to a KurrentDB connection
-string URI. This value will be used as the `uri` argument when the `KurrentDBClient`
-class is constructed by this package.
-
-```python
-os.environ['KURRENTDB_URI'] = 'esdb://localhost:2113?Tls=false'
-```
-
-If you are connecting to a "secure" KurrentDB server, unless
+If you are connecting to a "secure" KurrentDB server, and if
 the root certificate of the certificate authority used to generate the
-server's certificate is installed locally, then also set environment
+server's certificate is not installed locally, then also set environment
 variable `KURRENTDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
 suitable for making a secure gRPC connection to the KurrentDB server(s).
 This value will be used as the `root_certificates` argument when the
 `KurrentDBClient` class is constructed by this package.
 
-
 ```python
-os.environ['KURRENTDB_ROOT_CERTIFICATES'] = '<PEM encoded SSL/TLS root certificates>'
+os.environ["KURRENTDB_ROOT_CERTIFICATES"] = "<PEM encoded SSL/TLS root certificates>"
 ```
 
 Please refer to the [kurrentdbclient](https://github.com/pyeventsourcing/kurrentdbclient)
@@ -117,7 +114,7 @@ server, and the "kdb" and "kdb+discover" KurrentDB connection string
 URI schemes, and how to obtain a suitable SSL/TLS certificate for use
 in the client when connecting to a "secure" KurrentDB server.
 
-Construct the application.
+After configuring environment variables, construct the application.
 
 ```python
 training_school = TrainingSchool()
@@ -126,24 +123,24 @@ training_school = TrainingSchool()
 Call application methods from tests and user interfaces.
 
 ```python
-training_school.register('Fido')
-training_school.add_trick('Fido', 'roll over')
-training_school.add_trick('Fido', 'play dead')
-dog_details = training_school.get_dog_details('Fido')
-assert dog_details['name'] == 'Fido'
-assert dog_details['tricks'] == ('roll over', 'play dead')
+training_school.register("Fido")
+training_school.add_trick("Fido", "roll over")
+training_school.add_trick("Fido", "play dead")
+dog_details = training_school.get_dog_details("Fido")
+assert dog_details["name"] == "Fido"
+assert dog_details["tricks"] == ("roll over", "play dead")
 ```
 
-To see the events have been saved, we can reconstruct the application
+To see the events have been saved in KurrentDB, we can reconstruct the application
 and get Fido's details again.
 
 ```python
 training_school = TrainingSchool()
 
-dog_details = training_school.get_dog_details('Fido')
+dog_details = training_school.get_dog_details("Fido")
 
-assert dog_details['name'] == 'Fido'
-assert dog_details['tricks'] == ('roll over', 'play dead')
+assert dog_details["name"] == "Fido"
+assert dog_details["tricks"] == ("roll over", "play dead")
 ```
 
 ## Eventually-consistent materialised views
@@ -157,7 +154,9 @@ application
 
 ```python
 from abc import abstractmethod
+
 from eventsourcing.persistence import Tracking, TrackingRecorder
+
 
 class MaterialisedViewInterface(TrackingRecorder):
     @abstractmethod
@@ -183,6 +182,7 @@ The example below counts dogs and tricks in memory, using "plain old Python obje
 
 ```python
 from eventsourcing.popo import POPOTrackingRecorder
+
 
 class InMemoryMaterialiseView(POPOTrackingRecorder, MaterialisedViewInterface):
     def __init__(self):
@@ -216,8 +216,8 @@ by calling `incr_dog_counter()` on the materialised view. The `Dog.TrickAdded` e
 are processed by calling `incr_trick_counter()`.
 
 ```python
-from eventsourcing.domain import DomainEventProtocol
 from eventsourcing.dispatch import singledispatchmethod
+from eventsourcing.domain import DomainEventProtocol
 from eventsourcing.projection import Projection
 from eventsourcing.utils import get_topic
 
@@ -274,7 +274,7 @@ with ProjectionRunner(
     trick_count = materialised_view.get_trick_counter()
 
     # Record another event in "write model".
-    notification_id = training_school.add_trick('Fido', 'sit and stay')
+    notification_id = training_school.add_trick("Fido", "sit and stay")
 
     # Wait for the new event to be processed.
     materialised_view.wait(
@@ -287,7 +287,7 @@ with ProjectionRunner(
     assert trick_count + 1 == materialised_view.get_trick_counter()
 
     # Write another event.
-    notification_id = training_school.add_trick('Fido', 'jump hoop')
+    notification_id = training_school.add_trick("Fido", "jump hoop")
 
     # Wait for the new event to be processed.
     materialised_view.wait(

@@ -171,7 +171,7 @@ class TestDocs(TestCase):
         fido_suffix = str(uuid.uuid4())
         for i in range(len(lines)):
             line = lines[i]
-            line = line.replace("'Fido'", "'Fido-" + fido_suffix + "'")
+            line = line.replace('"Fido"', '"Fido-' + fido_suffix + '"')
             lines[i] = line
 
 
