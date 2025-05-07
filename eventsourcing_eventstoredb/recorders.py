@@ -244,6 +244,7 @@ class EventStoreDBApplicationRecorder(
         *,
         inclusive_of_start: bool = True,
     ) -> list[Notification]:
+        original_limit = limit
         if not inclusive_of_start:
             limit += 1
         recorded_events = self.client.read_all(
@@ -269,7 +270,7 @@ class EventStoreDBApplicationRecorder(
             notifications.append(notification)
 
             # Check we aren't going over the limit, in case we didn't drop the first.
-            if len(notifications) == limit:
+            if len(notifications) == original_limit:
                 break
 
             # Stop if we reached the 'stop' position.
