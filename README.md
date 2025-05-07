@@ -1,10 +1,9 @@
-# Event Sourcing in Python with EventStoreDB
+# Event Sourcing in Python with EventStoreDB and KurrentDB
 
-This is an extension package for the Python
-[eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
-that provides a persistence module for [EventStoreDB](https://www.eventstore.com/).
-It uses the [esdbclient](https://github.com/pyeventsourcing/esdbclient)
-package to communicate with EventStoreDB via its gRPC interface.
+This is an extension package for the Python [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library
+that provides a persistence module for [EventStoreDB and KurrentDB](https://www.kurrent.io).
+It uses the [kurrentdbclient](https://github.com/pyeventsourcing/kurrentdbclient)
+package to communicate with EventStoreDB and KurrentDB via the gRPC interface.
 
 ## Installation
 
@@ -18,8 +17,8 @@ Please note, it is recommended to install Python packages into a Python virtual 
 ## Getting started
 
 Define aggregates and applications in the usual way. Please note, "streams"
-in EventStoreDB are constrained to start from position `0`, and this package
-expects the `originator_version` of the first event in an aggregate sequence
+in EventStoreDB and KurrentDB are constrained to start from position `0`, and this
+package expects the `originator_version` of the first event in an aggregate sequence
 to be `0`, so you must set `INITIAL_VERSION` on your aggregate classes to `0`.
 
 ```python
@@ -54,7 +53,7 @@ class TrainingSchool(Application):
 
 
 class Dog(Aggregate):
-    INITIAL_VERSION = 0  # for EventStoreDB
+    INITIAL_VERSION = 0  # for EventStoreDB and KurrentDB
 
     @staticmethod
     def create_id(name: str):
@@ -75,8 +74,8 @@ class DogDetails(TypedDict):
     tricks: Tuple[str, ...]
 ```
 
-Configure the `TrainingSchool` application to use EventStoreDB by setting the
-environment variable `PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. You
+Configure the `TrainingSchool` application to use EventStoreDB or KurrentDB by setting
+the environment variable `PERSISTENCE_MODULE` to `'eventsourcing_eventstoredb'`. You
 can do this in actual environment variables, or by passing in an `env` argument when
 constructing  the application object, or by setting `env` on the application class.
 
@@ -87,29 +86,29 @@ os.environ['TRAININGSCHOOL_PERSISTENCE_MODULE'] = 'eventsourcing_eventstoredb'
 ```
 
 Also set environment variable `EVENTSTOREDB_URI` to an EventStoreDB
-connection string URI. This value will be used as the `uri`
-argument when the `ESDBClient` class is constructed by this package.
+or KurrentDB connection string URI. This value will be used as the `uri`
+argument when the `KurrentDBClient` class is constructed by this package.
 
 ```python
 os.environ['EVENTSTOREDB_URI'] = 'esdb://localhost:2113?Tls=false'
 ```
 
-If you are connecting to a "secure" EventStoreDB server, unless the
-root certificate of the certificate authority used to generate the
+If you are connecting to a "secure" EventStoreDB or KurrentDB server, unless
+the root certificate of the certificate authority used to generate the
 server's certificate is installed locally, then also set environment
 variable `EVENTSTOREDB_ROOT_CERTIFICATES` to an SSL/TLS certificate
 suitable for making a secure gRPC connection to the EventStoreDB server(s).
 This value will be used as the `root_certificates` argument when the
-`ESDBClient` class is constructed by this package.
+`KurrentDBClient` class is constructed by this package.
 
 
 ```python
 os.environ['EVENTSTOREDB_ROOT_CERTIFICATES'] = '<PEM encoded SSL/TLS root certificates>'
 ```
 
-Please refer to the [esdbclient](https://github.com/pyeventsourcing/esdbclient)
+Please refer to the [kurrentdbclient](https://github.com/pyeventsourcing/kurrentdbclient)
 documentation for details about starting a "secure" or "insecure" EventStoreDB
-server, the "esdb" and "esdb+discover" EventStoreDB connection string
+server, and the "esdb" and "esdb+discover" EventStoreDB connection string
 URI schemes, and how to obtain a suitable SSL/TLS certificate for use
 in the client when connecting to a "secure" EventStoreDB server.
 
@@ -304,8 +303,8 @@ that use a durable database such as SQLite and PostgreSQL.
 
 For more information, please refer to the Python
 [eventsourcing](https://github.com/pyeventsourcing/eventsourcing) library, the
-Python [esdbclient](https://github.com/pyeventsourcing/esdbclient) package,
-and the [EventStoreDB](https://www.eventstore.com/) project.
+Python [kurrentdbclient](https://github.com/pyeventsourcing/kurrentdbclient) package,
+and the [KurrentDB](https://www.kurrent.io) website.
 
 ## Contributors
 
