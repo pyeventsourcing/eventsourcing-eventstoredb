@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "eventsourcing-kurrentdb"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
   "eventsourcing>=9.4.5,<10.0",
   "kurrentdbclient>=1.0.2,<2.0",
