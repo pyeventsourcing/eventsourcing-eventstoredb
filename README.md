@@ -31,6 +31,7 @@ to be `0`, so you must set `INITIAL_VERSION` on your aggregate classes to `0`.
 ```python
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TypedDict
 from uuid import NAMESPACE_URL, UUID, uuid5
 
@@ -38,7 +39,7 @@ from eventsourcing.application import Application
 from eventsourcing.domain import Aggregate, event
 
 
-class TrainingSchool(Application):
+class TrainingSchool(Application[UUID]):
     def register(self, name: str) -> int:
         dog = Dog(name)
         recordings = self.save(dog)
@@ -65,12 +66,20 @@ class Dog(Aggregate):
     def create_id(name: str) -> UUID:
         return uuid5(NAMESPACE_URL, f"/dogs/{name}")
 
-    @event("Registered")
+    @dataclass(frozen=True)
+    class Registered(Aggregate.Created):
+        name: str
+
+    @dataclass(frozen=True)
+    class TrickAdded(Aggregate.Event):
+        trick: str
+
+    @event(Registered)
     def __init__(self, name: str) -> None:
         self.name = name
         self.tricks: list[str] = []
 
-    @event("TrickAdded")
+    @event(TrickAdded)
     def add_trick(self, trick: str) -> None:
         self.tricks.append(trick)
 
@@ -79,6 +88,15 @@ class DogDetails(TypedDict):
     name: str
     tricks: tuple[str, ...]
 ```
+
+## String IDs
+
+If you want to use Python strings as your aggregate IDs, then please read
+[this example](https://eventsourcing.readthedocs.io/en/stable/topics/examples/aggregate11.html)
+in the Python eventsourcing library docs.
+
+
+## Configuring the application to use KurrentDB
 
 Configure the `TrainingSchool` application to use KurrentDB with environment variables.
 You can configure an application with environment variables by setting them in the
@@ -185,7 +203,7 @@ from eventsourcing.popo import POPOTrackingRecorder
 
 
 class InMemoryMaterialiseView(POPOTrackingRecorder, MaterialisedViewInterface):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._dog_counter = 0
         self._trick_counter = 0
@@ -216,8 +234,9 @@ by calling `incr_dog_counter()` on the materialised view. The `Dog.TrickAdded` e
 are processed by calling `incr_trick_counter()`.
 
 ```python
+from typing import Any
+
 from eventsourcing.dispatch import singledispatchmethod
-from eventsourcing.domain import DomainEventProtocol
 from eventsourcing.projection import Projection
 from eventsourcing.utils import get_topic
 
@@ -229,15 +248,15 @@ class CountProjection(Projection[MaterialisedViewInterface]):
     )
 
     @singledispatchmethod
-    def process_event(self, event: DomainEventProtocol, tracking: Tracking) -> None:
+    def process_event(self, event: Any, tracking: Tracking) -> None:
         pass
 
     @process_event.register
-    def dog_registered(self, event: Dog.Registered, tracking: Tracking) -> None:
+    def dog_registered(self, _: Dog.Registered, tracking: Tracking) -> None:
         self.view.incr_dog_counter(tracking)
 
     @process_event.register
-    def trick_added(self, event: Dog.TrickAdded, tracking: Tracking) -> None:
+    def trick_added(self, _: Dog.TrickAdded, tracking: Tracking) -> None:
         self.view.incr_trick_counter(tracking)
 ```
 

@@ -278,6 +278,7 @@ class TestKurrentDBApplicationRecorder(ApplicationRecorderTestCase):
     EXPECT_CONTIGUOUS_NOTIFICATION_IDS = False
 
     def setUp(self) -> None:
+        self.validate_uuids = False
         # self.original_initial_version = Aggregate.INITIAL_VERSION
         # Aggregate.INITIAL_VERSION = 0
         self.client = KurrentDBClient(INSECURE_CONNECTION_STRING)
@@ -287,12 +288,15 @@ class TestKurrentDBApplicationRecorder(ApplicationRecorderTestCase):
         # Aggregate.INITIAL_VERSION = self.original_initial_version
 
     def create_recorder(self) -> ApplicationRecorder:
-        return KurrentDBApplicationRecorder(client=self.client)
+        recorder = KurrentDBApplicationRecorder(client=self.client)
+        recorder.validate_uuids = self.validate_uuids
+        return recorder
 
     def test_insert_select(self) -> None:
         # super().test_insert_select()
 
         # Construct the recorder.
+        self.validate_uuids = True
         recorder = self.create_recorder()
 
         # Get the current max notification ID.
@@ -519,14 +523,14 @@ class TestKurrentDBApplicationRecorder(ApplicationRecorderTestCase):
         self.assertEqual(notifications[1].originator_version, self.INITIAL_VERSION)
 
         # Select a limited number of notifications from initial position.
-        print("max_notification_id1:", max_notification_id1)
+        # print("max_notification_id1:", max_notification_id1)
         notifications = recorder.select_notifications(
             start=max_notification_id1,
             limit=1,
             inclusive_of_start=False,
         )
-        for notification in notifications:
-            print("notification:", notification)
+        # for notification in notifications:
+        #     print("notification:", notification)
         self.assertEqual(len(notifications), 1)
         self.assertEqual(notifications[0].originator_id, originator_id1)
         self.assertEqual(notifications[0].originator_version, self.INITIAL_VERSION)
@@ -592,6 +596,7 @@ class TestKurrentDBApplicationRecorder(ApplicationRecorderTestCase):
         super().test_concurrent_no_conflicts()
 
     def test_insert_subscribe(self) -> None:
+        self.validate_uuids = True
         super().optional_test_insert_subscribe()
 
     def test_subscribe_concurrent_reading_and_writing(self) -> None:
@@ -661,6 +666,20 @@ class TestKurrentDBApplicationRecorder(ApplicationRecorderTestCase):
         read_job.result()
 
         thread_pool.shutdown(wait=True)
+
+    def test_str_originator_ids(self) -> None:
+        self.validate_uuids = False
+        recorder = self.create_recorder()
+
+        originator_id = f"product-{uuid4()}"
+        stored_event = StoredEvent(
+            originator_id=originator_id,
+            originator_version=0,
+            topic="topic1",
+            state=b'{"state": "state1"}',
+        )
+
+        recorder.insert_events([stored_event])
 
 
 del AggregateRecorderTestCase

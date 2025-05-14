@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import Any, TypedDict
 from unittest import TestCase
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
@@ -10,7 +10,6 @@ from eventsourcing.application import Application
 from eventsourcing.dispatch import singledispatchmethod
 from eventsourcing.domain import (
     Aggregate,
-    DomainEventProtocol,
     event,
 )
 from eventsourcing.persistence import Tracking, TrackingRecorder
@@ -21,7 +20,7 @@ from eventsourcing.utils import get_topic
 from tests.common import INSECURE_CONNECTION_STRING
 
 
-class TrainingSchool(Application):
+class TrainingSchool(Application[UUID]):
     def register(self, name: str) -> int:
         dog = Dog(name)
         recordings = self.save(dog)
@@ -122,15 +121,15 @@ class CountProjection(Projection[CounterViewInterface]):
         super().__init__(view=view)
 
     @singledispatchmethod
-    def process_event(self, event: DomainEventProtocol, tracking: Tracking) -> None:
+    def process_event(self, event: Any, tracking: Tracking) -> None:
         pass
 
     @process_event.register
-    def aggregate_created(self, event: Dog.Registered, tracking: Tracking) -> None:
+    def aggregate_created(self, _: Dog.Registered, tracking: Tracking) -> None:
         self.view.incr_dog_counter(tracking)
 
     @process_event.register
-    def aggregate_event(self, event: Dog.TrickAdded, tracking: Tracking) -> None:
+    def aggregate_event(self, _: Dog.TrickAdded, tracking: Tracking) -> None:
         self.view.incr_trick_counter(tracking)
 
 

@@ -2,7 +2,7 @@ import contextlib
 import os
 from decimal import Decimal
 from itertools import chain
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import kurrentdbclient.exceptions
 from eventsourcing.application import Application, EventSourcedLog
@@ -11,7 +11,6 @@ from eventsourcing.persistence import InfrastructureFactoryError, PersistenceErr
 from eventsourcing.projection import ApplicationSubscription
 from eventsourcing.system import NotificationLogReader
 from eventsourcing.tests.application import (
-    TIMEIT_FACTOR,
     BankAccounts,
     ExampleApplicationTestCase,
 )
@@ -22,7 +21,6 @@ from tests.common import INSECURE_CONNECTION_STRING
 
 
 class TestApplicationWithKurrentDB(ExampleApplicationTestCase):
-    timeit_number = 30 * TIMEIT_FACTOR
     expected_factory_topic = "eventsourcing_kurrentdb.factory:KurrentDBFactory"
 
     def setUp(self) -> None:
@@ -232,31 +230,31 @@ class TestApplicationWithKurrentDB(ExampleApplicationTestCase):
         self.assertEqual(len(notifications), 8)
 
         # Check the individual notifications.
-        self.assertEqual(notifications[0].originator_id, account_id1)
+        self.assertEqual(notifications[0].originator_id, str(account_id1))
         self.assertEqual(notifications[0].originator_version, 0)
         self.assertTrue(notifications[0].topic.endswith("BankAccount.Opened"))
         self.assertEqual(notifications[0].id, max_notification_id2)
-        self.assertEqual(notifications[1].originator_id, account_id1)
+        self.assertEqual(notifications[1].originator_id, str(account_id1))
         self.assertEqual(notifications[1].originator_version, 1)
         self.assertTrue(notifications[1].topic.endswith("TransactionAppended"))
         self.assertEqual(notifications[1].id, max_notification_id3)
-        self.assertEqual(notifications[2].originator_id, account_id1)
+        self.assertEqual(notifications[2].originator_id, str(account_id1))
         self.assertEqual(notifications[2].originator_version, 2)
         self.assertTrue(notifications[2].topic.endswith("TransactionAppended"))
-        self.assertEqual(notifications[3].originator_id, account_id1)
+        self.assertEqual(notifications[3].originator_id, str(account_id1))
         self.assertEqual(notifications[3].originator_version, 3)
         self.assertTrue(notifications[3].topic.endswith("TransactionAppended"))
         self.assertEqual(notifications[3].id, max_notification_id4)
-        self.assertEqual(notifications[4].originator_id, account_id2)
+        self.assertEqual(notifications[4].originator_id, str(account_id2))
         self.assertEqual(notifications[4].originator_version, 0)
         self.assertTrue(notifications[4].topic.endswith("BankAccount.Opened"))
-        self.assertEqual(notifications[5].originator_id, account_id2)
+        self.assertEqual(notifications[5].originator_id, str(account_id2))
         self.assertEqual(notifications[5].originator_version, 1)
         self.assertTrue(notifications[5].topic.endswith("TransactionAppended"))
-        self.assertEqual(notifications[6].originator_id, account_id2)
+        self.assertEqual(notifications[6].originator_id, str(account_id2))
         self.assertEqual(notifications[6].originator_version, 2)
         self.assertTrue(notifications[6].topic.endswith("TransactionAppended"))
-        self.assertEqual(notifications[7].originator_id, account_id2)
+        self.assertEqual(notifications[7].originator_id, str(account_id2))
         self.assertEqual(notifications[7].originator_version, 3)
         self.assertTrue(notifications[7].topic.endswith("TransactionAppended"))
 
@@ -311,7 +309,7 @@ class TestApplicationWithKurrentDB(ExampleApplicationTestCase):
         class LoggedEvent(DomainEvent):
             name: str
 
-        app = Application()
+        app = Application[UUID]()
         log = EventSourcedLog(
             events=app.events,
             originator_id=uuid4(),

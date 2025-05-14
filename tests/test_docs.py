@@ -3,8 +3,11 @@ from __future__ import annotations
 import contextlib
 import os
 import ssl
+import sys
 import uuid
 from pathlib import Path
+from subprocess import PIPE, Popen
+from tempfile import NamedTemporaryFile
 from typing import Any
 from unittest import TestCase
 
@@ -134,6 +137,49 @@ class TestDocs(TestCase):
             _globals,
             _globals,
         )
+
+        print("Executed code OK")
+
+        # Write the code into a temp file.
+        with NamedTemporaryFile("w+") as tempfile:
+            temp_path = tempfile.name
+            tempfile.writelines(source)
+            tempfile.flush()
+
+            p = Popen(  # noqa: S603
+                [
+                    sys.executable,
+                    "-m",
+                    "mypy",
+                    # "--disable-error-code=no-redef",
+                    # "--disable-error-code=attr-defined",
+                    # "--disable-error-code=name-defined",
+                    # "--disable-error-code=truthy-function",
+                    temp_path,
+                ],
+                stdout=PIPE,
+                stderr=PIPE,
+                env={
+                    "PYTHONPATH": BASE_DIR,
+                },
+                encoding="utf-8",
+            )
+
+            out, err = p.communicate()
+
+            out = out.replace(temp_path, str(doc_path))
+            err = err.replace(temp_path, str(doc_path))
+
+            exit_status = p.wait()
+
+        # Check for errors running the code.
+        if exit_status:
+            print("Mypy errors:")
+            print(out)
+            print(err)
+            # self.fail(out + err)
+        else:
+            print("No mypy errors")
 
         # # Write the code into a temp file.
         # with NamedTemporaryFile("w+") as tempfile:

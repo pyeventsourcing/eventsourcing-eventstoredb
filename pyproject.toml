@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "eventsourcing-kurrentdb"
 version = "1.2.1"
 dependencies = [
-  "eventsourcing>=9.4.2,<10.0",
+  "eventsourcing>=9.4.5,<10.0",
   "kurrentdbclient>=1.0.2,<2.0",
 ]
 description = "Python package for eventsourcing with KurrentDB"
@@ -48,6 +48,7 @@ ruff = "*"
 pyright = "*"
 pycryptodome = "*"
 types-protobuf = "*"
+#eventsourcing = {path = "../eventsourcing", develop = true}
 
 [tool.black]
 line-length = 88
